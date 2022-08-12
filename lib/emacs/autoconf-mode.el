@@ -6,7 +6,8 @@
 
 ;; This file is part of Autoconf
 
-;; Copyright (C) 2001, 2006, 2009-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2001, 2006, 2009-2017, 2020-2022 Free Software
+;; Foundation, Inc.
 ;;
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -19,7 +20,7 @@
 ;; GNU General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;; A major mode for editing autoconf input (like configure.in).
 ;; Derived from m4-mode.el by Andrew Csillag (drew@staff.prodigy.com)

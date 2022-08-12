@@ -1,6 +1,6 @@
 ## Make Autoconf tests.
 
-# Copyright (C) 2000-2015 Free Software Foundation, Inc.
+# Copyright (C) 2000-2017, 2020-2022 Free Software Foundation, Inc.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,16 +13,15 @@
 # GNU General Public License for more details.
 
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # We don't actually distribute the built testsuite or package.m4, since one
 # only needs m4 to build them, and m4 is required to install Autoconf.
 # But if you are borrowing from this file for setting up autotest in your
 # project, remember to distribute both testsuite and package.m4.
 EXTRA_DIST += \
-  $(TESTSUITE_AT) \
   tests/local.at \
-  tests/mktests.sh \
+  tests/mktests.pl \
   tests/atlocal.in \
   tests/wrapper.as \
   tests/statesave.m4
@@ -88,20 +87,21 @@ $(wrappers): tests/wrapper.in
 ## ------------ ##
 
 TESTSUITE_GENERATED_AT = \
-  $(srcdir)/tests/aclang.at \
-  $(srcdir)/tests/acc.at \
-  $(srcdir)/tests/acfortran.at \
-  $(srcdir)/tests/acgo.at \
-  $(srcdir)/tests/acgeneral.at \
-  $(srcdir)/tests/acstatus.at \
-  $(srcdir)/tests/acautoheader.at \
-  $(srcdir)/tests/acautoupdate.at \
-  $(srcdir)/tests/acspecific.at \
-  $(srcdir)/tests/acfunctions.at \
-  $(srcdir)/tests/acheaders.at \
-  $(srcdir)/tests/actypes.at \
-  $(srcdir)/tests/aclibs.at \
-  $(srcdir)/tests/acprograms.at
+  tests/aclang.at \
+  tests/acc.at \
+  tests/acerlang.at \
+  tests/acfortran.at \
+  tests/acgo.at \
+  tests/acgeneral.at \
+  tests/acstatus.at \
+  tests/acautoheader.at \
+  tests/acautoupdate.at \
+  tests/acspecific.at \
+  tests/acfunctions.at \
+  tests/acheaders.at \
+  tests/actypes.at \
+  tests/aclibs.at \
+  tests/acprograms.at
 
 TESTSUITE_HAND_AT = \
   tests/suite.at \
@@ -120,6 +120,14 @@ TESTSUITE_HAND_AT = \
   tests/autoscan.at \
   tests/foreign.at
 
+TESTSUITE_EXTRA = \
+  tests/data/ax_prog_cc_for_build_v18.m4 \
+  tests/data/ax_prog_cxx_for_build_v3.m4 \
+  tests/data/gnulib_std_gnu11_2020_08_17.m4
+
+CLEANFILES += $(TESTSUITE_GENERATED_AT)
+EXTRA_DIST += $(TESTSUITE_HAND_AT) $(TESTSUITE_EXTRA)
+
 TESTSUITE_AT = $(TESTSUITE_GENERATED_AT) $(TESTSUITE_HAND_AT)
 TESTSUITE = tests/testsuite
 
@@ -136,7 +144,7 @@ $(TESTSUITE): tests/package.m4 \
 	mv $@.tmp $@
 
 # Factor out invocation of the testsuite script.
-run_testsuite = $(SHELL) $(TESTSUITE) -C tests
+run_testsuite = $(SHELL) $(TESTSUITE) -C tests MAKE=$(MAKE)
 
 # Avoid a race condition that would make parallel "distclean" fail.
 # The rule in clean-local tests for existence of $(TESTSUITE), and
@@ -157,6 +165,11 @@ clean-local:
 check-local: tests/atconfig tests/atlocal $(TESTSUITE)
 	+$(run_testsuite) $(TESTSUITEFLAGS)
 
+# Automake doesn't know how to regenerate this file because
+# it's created via AC_CONFIG_COMMANDS.
+tests/atconfig: $(top_builddir)/config.status
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+
 # Run the test suite on the *installed* tree.
 installcheck-local: tests/atconfig tests/atlocal $(TESTSUITE)
 	+$(run_testsuite) AUTOTEST_PATH="$(bindir)" $(TESTSUITEFLAGS)
@@ -172,8 +185,7 @@ MAINTAINERCLEANFILES += $(TESTSUITE_GENERATED_AT)
 ## Producing the test files.
 
 # The files which contain macros we check for syntax.  Use $(srcdir)
-# for the benefit of non-GNU make.  Fix the names in the rule below
-# where we 'cd' to $srcdir.
+# for the benefit of non-GNU make.
 autoconfdir = $(srcdir)/lib/autoconf
 AUTOCONF_FILES = $(autoconfdir)/general.m4 \
 		 $(autoconfdir)/status.m4 \
@@ -198,24 +210,20 @@ $(TESTSUITE_GENERATED_AT): tests/mktests.stamp
 	  $(MAKE) $(AM_MAKEFLAGS) tests/mktests.stamp; \
 	fi
 
-tests/mktests.stamp : tests/mktests.sh $(AUTOCONF_FILES)
+tests/mktests.stamp : tests/mktests.pl $(AUTOCONF_FILES)
 	@rm -f tests/mktests.tmp
 	@touch tests/mktests.tmp
-	cd $(srcdir) && $(SHELL) tests/mktests.sh \
-	  `echo " "$(AUTOCONF_FILES) | sed 's, [^ ]*/, lib/autoconf/,g'`
+	$(PERL) $(srcdir)/tests/mktests.pl tests $(AUTOCONF_FILES)
 	@mv -f tests/mktests.tmp $@
 
-## Distribute the stamp file, since we distribute the generated files.
-EXTRA_DIST += tests/mktests.stamp
-CLEANFILES += tests/mktests.tmp
-MAINTAINERCLEANFILES += tests/mktests.stamp
+CLEANFILES += tests/mktests.tmp tests/mktests.stamp
 
 ## maintainer-check ##
 
-# These cannot be run in parallel.
+# The test suite cannot be run in parallel with itself.
 maintainer-check:
+	$(MAKE) $(AM_MAKEFLAGS) check
 	$(MAKE) $(AM_MAKEFLAGS) maintainer-check-posix
-	$(MAKE) $(AM_MAKEFLAGS) maintainer-check-c++
 
 # The hairy heredoc is more robust than using echo.
 CLEANFILES += expr
@@ -236,7 +244,3 @@ expr:
 maintainer-check-posix: expr
 	POSIXLY_CORRECT=yes $(MAKE) $(AM_MAKEFLAGS) check
 	rm expr
-
-# Try using G++ as a C compiler.
-maintainer-check-c++:
-	CC=g++ $(MAKE) $(AM_MAKEFLAGS) check

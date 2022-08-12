@@ -1,6 +1,6 @@
 #							-*- Autotest -*-
 
-# Copyright (C) 2000-2015 Free Software Foundation, Inc.
+# Copyright (C) 2000-2017, 2020-2022 Free Software Foundation, Inc.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 AT_BANNER([[Testing config.status.]])
@@ -107,9 +107,9 @@ AT_CHECK_CONFIGURE([--config-cache -q])
 AT_CHECK([cat file], [], [`$1'
 ])
 
-# Testing --recheck: 1. have the environment `forget' about PRECIOUS.
+# Testing --recheck: 1. have the environment 'forget' about PRECIOUS.
 unset precious
-# 2. Rerun config.status to recreate `file'.
+# 2. Rerun config.status to recreate 'file'.
 AT_CHECK([./config.status --recheck], [], [ignore])
 AT_CHECK([./config.status], [], [ignore])
 # 3. Check that file contains the old value of PRECIOUS.
@@ -129,7 +129,7 @@ AT_CHECK_CONFIGURE([--config-cache], [m4_default([$3], [1])], [stdout], [stderr]
 AT_SETUP([AC_ARG_VAR])
 
 # We don't want to run this test if this shell doesn't support
-# `unset'.
+# 'unset'.
 AT_CHECK([
 if (FOO=FOO; unset FOO) >/dev/null 2>&1; then
   exit 0
@@ -149,7 +149,10 @@ AT_DATA([file.in],
 [[`@precious@'
 ]])
 
-AT_CHECK_AUTOCONF
+AT_CHECK_AUTOCONF([], 0, [],
+[[configure.ac:4: warning: AC_OUTPUT should be used without arguments.
+configure.ac:4: You should run autoupdate.
+]])
 
 # Set a precious variable
 AT_CHECK_AC_ARG_VAR([], [apple of my eye])
@@ -225,7 +228,7 @@ AT_CHECK_AUTOCONF
 # ------------------------------------------------------------------
 # Check that THING and var-THING (which uses variables in AC_CONFIG_THING)
 # are properly created, with the right content.
-# Use `grep OK' instead of a simple `cat' to avoid banners such as in
+# Use 'grep OK' instead of a simple 'cat' to avoid banners such as in
 # AC_CONFIG_HEADERS.
 m4_define([AT_CHECK_CONFIG_CREATION],
 [AT_CHECK_CONFIGURE([what_to_test=$1])
@@ -251,7 +254,7 @@ AT_CHECK([grep OK var-$1], [], [OK
 # --------------------------------------------------------------------------
 # Check that THING and var-THING (which uses variables in AC_CONFIG_THING)
 # are properly created, with the right content.
-# Use `grep OK' instead of a simple `cat' to avoid banners such as in
+# Use 'grep OK' instead of a simple 'cat' to avoid banners such as in
 # AC_CONFIG_HEADERS.
 m4_define([AT_CHECK_CONFIG_CREATION_NOWRITE],
 [AT_CHECK_CONFIGURE([what_to_test=$1])
@@ -328,7 +331,7 @@ AT_CHECK_CONFIG_CREATION_NOWRITE(command)
 # Create a link
 AT_CHECK_CONFIG_CREATION_NOWRITE(link)
 
-# Check that no use of `ac_write_fail' escaped into config.status
+# Check that no use of 'ac_write_fail' escaped into config.status
 AT_CHECK([grep ac_write_fail config.status], [1])
 
 # Check that --file and --header accept funny file names
@@ -407,13 +410,13 @@ mkdir build
 AT_CAPTURE_FILE([build/config.log])[]dnl
 cd build
 AT_CHECK([../configure], [1], [ignore],
-[[config.status: error: cannot find input file: `nonexistent.in'
+[[config.status: error: cannot find input file: 'nonexistent.in'
 ]])
 # Make sure that the output file doesn't exist
 AT_CHECK([test -f nonexistent], 1)
 cd ..
 AT_CHECK_CONFIGURE([], [1], [],
-[[config.status: error: cannot find input file: `nonexistent.in'
+[[config.status: error: cannot find input file: 'nonexistent.in'
 ]])
 # Make sure that the output file doesn't exist
 AT_CHECK([test -f nonexistent], 1)
@@ -427,14 +430,14 @@ AT_CLEANUP
 ## configure invocation.  ##
 ## ---------------------- ##
 
-# Check that `configure' and `config.status' honor their interface.
+# Check that 'configure' and 'config.status' honor their interface.
 #
-# We run `./configure one=val1 --enable-two=val2 --with-three=val3'
-# and verify that (i) `configure' correctly receives the arguments,
-# (ii) correctly passes them to `config.status', which we check by
-# running `config.status --recheck', (iii) correctly passes them
+# We run './configure one=val1 --enable-two=val2 --with-three=val3'
+# and verify that (i) 'configure' correctly receives the arguments,
+# (ii) correctly passes them to 'config.status', which we check by
+# running 'config.status --recheck', (iii) correctly passes them
 # to sub-configure scripts, and (iv) correctly reproduces them with
-# `config.status --config'.
+# 'config.status --config'.
 
 AT_SETUP([configure invocation])
 
@@ -493,11 +496,38 @@ AT_CLEANUP
 
 
 
+## ---------------------- ##
+## --help and --version.  ##
+## ---------------------- ##
+
+AT_SETUP([--help and --version in unwritable directory])
+
+AS_MKDIR_P([inner])
+AT_DATA([inner/configure.ac],
+[[AC_INIT
+AC_OUTPUT
+]])
+
+AT_CHECK_M4([(cd inner && autoconf --force)])
+AT_CHECK([test -s inner/configure])
+if test "$SHELL_N" != none; then
+  AT_CHECK_SHELL_SYNTAX([inner/configure])
+fi
+
+chmod a-w inner
+AT_CHECK([(cd inner && ./configure --help)], 0, [ignore], [ignore])
+AT_CHECK([(cd inner && ./configure --version)], 0, [ignore], [ignore])
+chmod u+w inner
+
+AT_CLEANUP
+
+
+
 ## -------------------------------------------- ##
-## Check that `#define' templates are honored.  ##
+## Check that '#define' templates are honored.  ##
 ## -------------------------------------------- ##
 
-# Use various forms of `#define' templates, and make sure there are no
+# Use various forms of '#define' templates, and make sure there are no
 # problems when a symbol is prefix of another.
 
 AT_SETUP([@%:@define header templates])
@@ -614,7 +644,7 @@ AT_DATA([expout],
 [[-DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -Dfoo=toto -Dbar=tata -Dbaz=titi -Dfubar=tutu -Da=A -Daaa=AAA -Daa=AA -Dmultiline=line1line2line3\ line4 -Dmultiline_args\(ARG1,\ ARG2\)=ARG2\ ARG1 -Dpaste\(a,b\)=a\#\#b
 ]])
 
-# Because we strip trailing spaces in `testsuite' we can't leave one in
+# Because we strip trailing spaces in 'testsuite' we can't leave one in
 # expout, hence nuke the one left by AC_OUTPUT_MAKE_DEFS.
 AT_CHECK([sed -e 's/ $//' defs], 0, expout)
 
@@ -629,7 +659,7 @@ AT_CLEANUP
 ## Require 100 AC_DEFINE and AC_SUBST and AC_SUBST_FILE with a significantly
 ## big value.  This is mostly to check that Autoconf produces portable sed
 ## scripts in config.status.  sed is used to skip the first two lines
-## `Generated by ...'.
+## 'Generated by ...'.
 
 # We use m4_for many times.
 m4_pattern_allow([^m4_for$])
@@ -643,7 +673,7 @@ m4_define([AT_BIG_VALUE],
 [This value should be long enough to torture the various limits of sed and other tools used by Autoconf.])
 
 m4_define([AT_DESCRIPTION],
-[Define to a long string if your `Autoconf' works properly.])
+[Define to a long string if your 'Autoconf' works properly.])
 
 
 # AT_DUMMY_VAR(NUMBER)
@@ -716,7 +746,9 @@ AC_OUTPUT
 ]])# configure.ac
 
 AT_CHECK_AUTOCONF
-AT_CHECK_AUTOHEADER
+AT_CHECK_AUTOHEADER([],
+  m4_for(AT_Count, 1, 100, 1, [ AT_DUMMY_VAR(AT_Count)]))
+
 # Check both awk and the result of AC_PROG_AWK.
 # Quote the first word in the for list for Solaris sh.
 for awk_arg in "FOO=" AWK=awk; do
@@ -864,7 +896,7 @@ AC_DEFINE([fooq], ]m4_for([n], 1, 100,, ....................)[, [desc])
 ]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_AUTOHEADER
+AT_CHECK_AUTOHEADER([], [foo fooq])
 AT_CHECK_CONFIGURE
 AT_CHECK_DEFINES([@%:@define foo m4_for([n], 1, 100,, ....................)
 @%:@define fooq m4_for([n], 1, 100,, ....................)
@@ -946,7 +978,8 @@ AC_PROG_AWK
 AC_CONFIG_FILES([Foo Zardoz])]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_AUTOHEADER
+AT_CHECK_AUTOHEADER([],
+   [foo fooq bar barq unq1 unq2 unq2 unq3 unq4 unq5 unq6 unq7])
 # Check both awk and the result of AC_PROG_AWK
 # Quote the first word in the for list for Solaris sh.
 for awk_arg in "FOO=" AWK=awk; do
@@ -1034,32 +1067,26 @@ two], [This spans two lines.])
 AT_CHECK_AUTOCONF([], [], [], [stderr])
 dnl Older versions of m4 report error at line 5 (end of macro);
 dnl newer versions report it at line 4 (start of macro).
-AT_CHECK([[sed 's/^configure.ac:[45]: //' stderr]], [],
-[[warning: AC_DEFINE: `one
+AT_CHECK([[sed '/trailer\.m4:/d; s/^configure\.ac:[45]: //' stderr]], [],
+[[warning: AC_DEFINE: 'one
 two' is not a valid preprocessor define value
 ]])
-AT_CHECK_AUTOHEADER([], [], [], [stderr])
-AT_CHECK([[sed 's/^configure.ac:[45]: //' stderr]], [],
-[[warning: AC_DEFINE: `one
-two' is not a valid preprocessor define value
-]])
+AT_CHECK_AUTOHEADER([], [foo])
 AT_CHECK_CONFIGURE
 AT_CHECK_DEFINES([[#define foo one
 ]])
+
+rm -rf autom4te.cache
 
 AT_CONFIGURE_AC([[AC_DEFINE_UNQUOTED([foo], [one
 two], [This spans two lines.])
 ]])
 AT_CHECK_AUTOCONF([], [], [], [stderr])
-AT_CHECK([[sed 's/^configure.ac:[45]: //' stderr]], [],
-[[warning: AC_DEFINE_UNQUOTED: `one
+AT_CHECK([[sed '/trailer.m4:/d; s/^configure\.ac:[45]: //' stderr]], [],
+[[warning: AC_DEFINE_UNQUOTED: 'one
 two' is not a valid preprocessor define value
 ]])
-AT_CHECK_AUTOHEADER([], [], [], [stderr])
-AT_CHECK([[sed 's/^configure.ac:[45]: //' stderr]], [],
-[[warning: AC_DEFINE_UNQUOTED: `one
-two' is not a valid preprocessor define value
-]])
+AT_CHECK_AUTOHEADER([], [foo])
 AT_CHECK_CONFIGURE
 AT_CHECK_DEFINES([[#define foo one
 ]])
@@ -1121,7 +1148,7 @@ d@&t@nl The following line silences the warnings, if uncommented:
 d@&t@nl AC_DEFUN([AC_DATAROOTDIR_CHECKED])
 
 # This substitution is wrong and bogus!  Don't use it in your own code!
-# Read `info Autoconf "Defining Directories"'!
+# Read 'info Autoconf "Defining Directories"'!
 AC_SUBST([mydatadir], [${datadir}/my])
 
 AC_CONFIG_FILES([Foo Bar])
@@ -1133,7 +1160,7 @@ cp "$abs_top_srcdir/build-aux/install-sh" .
 AT_CHECK_AUTOCONF
 AT_CHECK_CONFIGURE([], [], [],
   [config.status: WARNING:  'Foo.in' seems to ignore the --datarootdir setting
-config.status: WARNING: Bar contains a reference to the variable `datarootdir'
+config.status: WARNING: Bar contains a reference to the variable 'datarootdir'
 which seems to be undefined.  Please make sure it is defined
 ])
 AT_CHECK([grep datarootdir Foo], 1, [])
@@ -1243,14 +1270,12 @@ all: f f1 f2
 
 AT_CHECK_AUTOCONF
 
-: "${MAKE=make}"
-
 # In place.
 AT_CHECK([./configure $configure_options], [], [ignore])
 # Treat BSD make separately, afterwards, for maximal coverage.
 dirs='at paren brace'
 for dir in $dirs; do
-  AT_CHECK([cd $dir && $MAKE], [], [ignore], [ignore])
+  AT_CHECK_MAKE([], [$dir])
 done
 
 rm -f config.status
@@ -1259,20 +1284,21 @@ mkdir build absbuild
 # Relative name.
 AT_CHECK([cd build && ../configure $configure_options], [], [ignore])
 for dir in $dirs; do
-  AT_CHECK([cd build/$dir && $MAKE], [], [ignore], [ignore])
+  AT_CHECK_MAKE([], [build/$dir])
 done
 
 # Absolute name.
 at_here=`pwd`
 AT_CHECK([cd absbuild && "$at_here/configure" $configure_options], [], [ignore])
 for dir in $dirs; do
-  AT_CHECK([cd absbuild/$dir && $MAKE], [], [ignore], [ignore])
+  AT_CHECK_MAKE([], [absbuild/$dir])
 done
 
 # These will not pass with BSD make.
-AT_CHECK([cd space && { $MAKE || exit 77; }], [], [ignore], [ignore])
-AT_CHECK([cd build/space && $MAKE], [], [ignore], [ignore])
-AT_CHECK([cd absbuild/space && $MAKE], [], [ignore], [ignore])
+AT_CHECK_MAKE([|| exit 77], [space])
+AT_CHECK_MAKE([], [build/space])
+AT_CHECK_MAKE([], [absbuild/space])
+
 
 AT_CLEANUP
 
@@ -1287,10 +1313,11 @@ AT_DATA([configure.ac],
 [[AC_INIT
 kill -2 $$
 exit 77
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_CONFIGURE([], 1, ignore, ignore)
+AT_CHECK_CONFIGURE([], [1], [ignore], [ignore])
 
 AT_CLEANUP
 
@@ -1436,12 +1463,12 @@ AT_CHECK([[grep '[1-9]\.[0-9]' stdout || exit 77]], [], [ignore])
 # It should understand configure.ac.
 AT_CHECK([[grep '[^0-9]1\.[01234][^0-9]' stdout && exit 77]], [1], [ignore])
 
-# Set CONFIG_SITE to a nonexistent file, so that there are
-# no worries about nonstandard values for 'prefix'.
-CONFIG_SITE=no-such-file
-export CONFIG_SITE
+# Prevent aclocal from reading third-party macros, in case they are buggy.
+mkdir empty
+ACLOCAL="aclocal --system-acdir=`cd empty && pwd`"
+export ACLOCAL
 
-# The contents of `inner/', and `inner/innermost/'.
+# The contents of 'inner/', and 'inner/innermost/'.
 AS_MKDIR_P([inner/innermost])
 
 AT_DATA([inner/configure.ac],
@@ -1463,7 +1490,7 @@ top_srcdir=@top_srcdir@
 prefix=@prefix@
 ])
 
-# The contents of `.'
+# The contents of '.'
 AT_DATA([install-sh], [])
 
 # nonexistent is allowed not to exist.
@@ -1477,9 +1504,7 @@ AC_CONFIG_SUBDIRS([inner])
 AC_OUTPUT
 ]])
 
-# If there are improperly quoted AC_DEFUN installed in share/aclocal,
-# they trigger warnings from aclocal 1.8, so ignore stderr.
-AT_CHECK([autoreconf], [], [], [ignore])
+AT_CHECK([autoreconf])
 AT_CHECK([test -f inner/configure])
 
 # Running the outer configure recursively should provide the innermost
@@ -1562,7 +1587,12 @@ AT_KEYWORDS(autoreconf)
 # We use aclocal (via autoreconf).
 AT_CHECK([aclocal --version || exit 77], [], [ignore], [ignore])
 
-# The contents of `.'
+# Prevent aclocal from reading third-party macros, in case they are buggy.
+mkdir empty
+ACLOCAL="aclocal --system-acdir=`cd empty && pwd`"
+export ACLOCAL
+
+# The contents of '.'
 AT_DATA([install-sh], [])
 AT_DATA([configure.ac],
 [[AC_INIT(GNU Outer, 1.0)
@@ -1574,7 +1604,7 @@ AC_CONFIG_SUBDIRS([
 AC_OUTPUT
 ]])
 
-# The contents of `inner/', and `inner/innermost/'.
+# The contents of 'inner/', and 'inner/innermost/'.
 AS_MKDIR_P([inner/innermost])
 AS_MKDIR_P([inner2])
 
@@ -1602,9 +1632,7 @@ AC_ARG_VAR([INNER2], [an inner2 variable])
 AC_OUTPUT
 ]])
 
-AT_CHECK([autoreconf -Wall -v], [0], [ignore], [stderr])
-# We should not warn about nonliteral argument to AC_CONFIG_SUBDIRS here.
-AT_CHECK([grep 'AC_CONFIG_SUBDIRS:.*literals' stderr], [1])
+AT_CHECK([autoreconf -Wall], [0], [ignore])
 AT_CHECK([test -f inner/configure])
 AT_CHECK([test -f inner/innermost/configure])
 AT_CHECK([test -f inner/innermost/config.hin])
@@ -1698,6 +1726,11 @@ AT_KEYWORDS([autoreconf])
 # We use aclocal (via autoreconf).
 AT_CHECK([aclocal --version || exit 77], [], [ignore], [ignore])
 
+# Prevent aclocal from reading third-party macros, in case they are buggy.
+mkdir empty
+ACLOCAL="aclocal --system-acdir=`cd empty && pwd`"
+export ACLOCAL
+
 AT_DATA([install-sh], [])
 AT_DATA([configure.ac],
 [[AC_INIT(GNU Outer, 1.0)
@@ -1717,11 +1750,12 @@ exit 0
 ]])
 chmod +x inner/configure
 
-AT_CHECK([autoreconf -Wall -v], 0, [ignore], [ignore])
+AT_CHECK([autoreconf -Wall], 0, [ignore])
 
 # Running the outer configure recursively should provide the innermost
 # help strings.
-AT_CHECK([./configure $configure_options --help=recursive | grep "folks"], 0, [ignore])
+AT_CHECK([./configure $configure_options --help=recursive | grep "folks"],
+         [0], [ignore])
 
 # Running the outer configure should trigger the inner.
 AT_CHECK([./configure $configure_options], 0, [ignore])
@@ -1750,10 +1784,11 @@ AC_CONFIG_SUBDIRS([$my_subdirs])
 AC_OUTPUT
 ]])
 
-# Hand-written aclocal.m4, so we don't invoke `aclocal -Werror' which
-# could barf over warnings in third-party macro files, or fail over
-# warnings with older aclocal which didn't yet understand -W*.
+# Prevent autoreconf from running aclocal, which might not exist,
+# or could barf over warnings in third-party macro files.
 AT_DATA([aclocal.m4])
+ACLOCAL=true
+export ACLOCAL
 
 AS_MKDIR_P([foo])
 
@@ -1780,6 +1815,34 @@ AT_CHECK([test -f foo/innerfile])
 
 AT_CLEANUP
 
+## ------------------------- ##
+## Empty AC_CONFIG_SUBDIRS.  ##
+## ------------------------- ##
+
+AT_SETUP([Empty AC_CONFIG_SUBDIRS])
+AT_KEYWORDS([autoreconf])
+
+AT_DATA([install-sh], [])
+AT_DATA([configure.ac],
+[[AC_INIT(GNU Outer, 1.0)
+
+AC_CONFIG_SUBDIRS()
+AC_OUTPUT
+]])
+
+# Prevent autoreconf from running aclocal, which might not exist,
+# or could barf over warnings in third-party macro files.
+AT_DATA([aclocal.m4])
+ACLOCAL=true
+export ACLOCAL
+
+# autoreconf should have no complaints, and the generated configure
+# script should run fine with or without --no-recursion.
+AT_CHECK([autoreconf -Werror], [0], [ignore])
+AT_CHECK_CONFIGURE()
+AT_CHECK_CONFIGURE([--no-recursion])
+
+AT_CLEANUP
 
 ## ----------------- ##
 ## Empty directory.  ##
@@ -1788,11 +1851,13 @@ AT_CLEANUP
 AT_SETUP([Empty directory])
 AT_KEYWORDS([autoreconf])
 
-# We use aclocal (via autoreconf).
-AT_CHECK([aclocal --version || exit 77], [], [ignore], [ignore])
+# Prevent autoreconf from running aclocal, which might not exist,
+# or could barf over warnings in third-party macro files.
+ACLOCAL=true
+export ACLOCAL
 
 # The test group directory is not necessarily _empty_, but it does not contain
-# files meaningful to `autoreconf'.
+# files meaningful to 'autoreconf'.
 
 AT_CHECK([autoreconf -Wall -v], 1, [ignore], [ignore])
 
@@ -1813,6 +1878,12 @@ AT_KEYWORDS([autoreconf])
 AT_CHECK([automake --version || exit 77], [], [stdout], [ignore])
 AT_CHECK([[grep '[1-9]\.[0-9]' stdout || exit 77]], [], [ignore])
 
+# Prevent aclocal from reading third-party macros, in case they are buggy.
+# (AM_INIT_AUTOMAKE will still be available via the default --automake-acdir.)
+mkdir empty
+ACLOCAL="aclocal --system-acdir=`cd empty && pwd`"
+export ACLOCAL
+
 AT_DATA([configure.ac],
 [[AC_INIT(GNU foo, 1.0)
 AM_INIT_AUTOMAKE
@@ -1821,12 +1892,343 @@ AC_OUTPUT
 ]])
 
 AT_DATA([HeeHee.am],
-[[# Humans do no worse than `GNUmakefile.am'.
+[[# Humans do no worse than 'GNUmakefile.am'.
 AUTOMAKE_OPTIONS = foreign 1.8
 ]])
 
 AT_CHECK([autoreconf -Wall -v -i], 0, [ignore], [stderr],
 	 [AT_CHECK([grep 'require.*1\.8' stderr && exit 77], [1])])
 AT_CHECK([test -f HeeHee.in])
+
+AT_CLEANUP
+
+## ------------------------------ ##
+## Specific warnings options.     ##
+## ------------------------------ ##
+
+AT_SETUP([Specific warnings options for autoreconf])
+AT_KEYWORDS([autoreconf])
+
+# If autoreconf is given a -W option that's mentioned in its own
+# --help output, that option should not cause errors, even if some
+# of the subsidiary programs don't support it.
+
+# We use aclocal and automake via autoreconf.
+AT_CHECK([automake --version || exit 77], [], [ignore], [ignore])
+
+# Prevent aclocal from reading third-party macros, in case they are buggy.
+# (AM_INIT_AUTOMAKE will still be available via the default --automake-acdir.)
+mkdir empty
+ACLOCAL="aclocal --system-acdir=`cd empty && pwd`"
+export ACLOCAL
+
+AT_DATA([configure.ac],
+[[AC_INIT(GNU foo, 1.0)
+AM_INIT_AUTOMAKE
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+]])
+
+AT_DATA([Makefile.am],
+[[AUTOMAKE_OPTIONS = foreign
+]])
+
+# To silence complaints about required helper scripts from automake.
+# We aren't going to run the generated Makefile so we don't need the
+# real helper scripts.
+AT_DATA([install-sh], [])
+AT_DATA([missing], [])
+
+# In order to cut down the time this test takes, we do not test all
+# of the supported warning categories, just the most common case
+# (-Wall) and some specific categories that are known to have been a
+# problem in the past.
+AT_CHECK([autoreconf -Werror -Wall], 0, [], [])
+rm -rf configure config.h.in Makefile.in aclocal.m4 autom4te.cache
+
+AT_CHECK([autoreconf -Werror -Wcross], 0, [], [])
+rm -rf configure config.h.in Makefile.in aclocal.m4 autom4te.cache
+
+AT_CHECK([autoreconf -Werror -Wportability-recursive], 0, [], [])
+rm -rf configure config.h.in Makefile.in aclocal.m4 autom4te.cache
+
+AT_CLEANUP
+
+## ------------------------- ##
+## Missing auxiliary files.  ##
+## ------------------------- ##
+
+AT_SETUP([Missing auxiliary files (config.*)])
+AT_KEYWORDS([autoreconf])
+
+# Prevent autoreconf from running aclocal, which might not exist,
+# or could barf over warnings in third-party macro files.
+AT_DATA([aclocal.m4])
+ACLOCAL=true
+export ACLOCAL
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU foo], [1.0])
+AC_CONFIG_AUX_DIR([build-aux])
+AC_CANONICAL_HOST
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF
+
+# Both configure and autoreconf should detect the missing files.
+AT_CHECK_CONFIGURE([], [1], [ignore],
+[configure: error: cannot find required auxiliary files: config.guess config.sub
+])
+
+AT_CHECK([autoreconf], 1, [],
+[configure.ac: error: required file 'config.sub' not found
+configure.ac: error: required file 'config.guess' not found
+configure.ac:   try running autoreconf --install
+])
+
+# If only one file is missing, the error messages should only report
+# that one.  Also, the above invocation of autoreconf should _not_
+# have created build-aux, because it wasn't called with --install.
+AT_CHECK([test ! -e build-aux])
+mkdir build-aux
+: > build-aux/config.guess
+
+AT_CHECK_CONFIGURE([], [1], [ignore],
+[configure: error: cannot find required auxiliary files: config.sub
+])
+
+AT_CHECK([autoreconf], 1, [],
+[configure.ac: error: required file 'config.sub' not found
+configure.ac:   try running autoreconf --install
+])
+
+# Missing aux files should not interfere with --help and --version.
+AT_CHECK_CONFIGURE([--help], [0], [ignore], [ignore])
+AT_CHECK_CONFIGURE([--version], [0], [ignore], [ignore])
+
+# autoreconf --install should be able to install config.sub and config.guess.
+rm build-aux/config.guess
+AT_CHECK([autoreconf --install])
+
+AT_CHECK([test -x build-aux/config.guess])
+AT_CHECK([test -x build-aux/config.sub])
+AT_CHECK([test ! -e build-aux/install-sh])
+
+AT_CHECK_CONFIGURE
+
+AT_CLEANUP
+
+
+AT_SETUP([Missing auxiliary files (install-sh)])
+AT_KEYWORDS([autoreconf])
+
+# Same as "Missing auxiliary files (config.*)" except that the
+# configure script _doesn't_ need config.{sub,guess} but does need
+# install-sh.
+
+# Prevent autoreconf from running aclocal, which might not exist,
+# or could barf over warnings in third-party macro files.
+AT_DATA([aclocal.m4])
+ACLOCAL=true
+export ACLOCAL
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU foo], [1.0])
+AC_CONFIG_AUX_DIR([build-aux])
+AC_PROG_INSTALL
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF
+
+# Both configure and autoreconf should detect the missing files.
+AT_CHECK_CONFIGURE([], [1], [ignore],
+[configure: error: cannot find required auxiliary files: install-sh
+])
+
+AT_CHECK([autoreconf], 1, [],
+[configure.ac: error: required file 'install-sh' not found
+configure.ac:   try running autoreconf --install
+])
+AT_CHECK([test ! -e build-aux])
+
+AT_CHECK_CONFIGURE([--help], [0], [ignore], [ignore])
+AT_CHECK_CONFIGURE([--version], [0], [ignore], [ignore])
+
+AT_CHECK([autoreconf --install])
+
+AT_CHECK([test ! -e build-aux/config.guess])
+AT_CHECK([test ! -e build-aux/config.sub])
+AT_CHECK([test -x build-aux/install-sh])
+
+AT_CHECK_CONFIGURE
+
+AT_CLEANUP
+
+
+AT_SETUP([Missing auxiliary files (foreign)])
+AT_KEYWORDS([autoreconf])
+
+# If an aux file is required that autoreconf doesn't know how to install,
+# it shouldn't suggest autoreconf --install.
+# This also verifies that AC_REQUIRE_AUX_FILE can be used outside of a
+# macro definition, which was always the intent, and was recommended
+# usage in some automake recipes, but which was broken in autoconf
+# beta 2.69d (see https://savannah.gnu.org/support/?110363).
+
+# Prevent autoreconf from running aclocal, which might not exist,
+# or could barf over warnings in third-party macro files.
+AT_DATA([aclocal.m4])
+ACLOCAL=true
+export ACLOCAL
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU foo], [1.0])
+AC_CONFIG_AUX_DIR([build-aux])
+AC_REQUIRE_AUX_FILE([tap-driver.sh])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE([], [1], [ignore],
+[configure: error: cannot find required auxiliary files: tap-driver.sh
+])
+
+AT_CHECK([autoreconf], 1, [],
+[configure.ac: error: required file 'tap-driver.sh' not found
+])
+AT_CHECK([test ! -e build-aux])
+
+AT_CHECK([autoreconf --install], 1, [],
+[configure.ac: error: required file 'tap-driver.sh' not found
+])
+# autoreconf --install always creates the aux directory.
+AT_CHECK([test -e build-aux])
+
+touch build-aux/tap-driver.sh
+
+AT_CHECK([autoreconf])
+AT_CHECK_CONFIGURE
+
+AT_CLEANUP
+
+
+AT_SETUP([Missing auxiliary files (--force)])
+AT_KEYWORDS([autoreconf])
+
+# Aux files that already exist should not be overwritten, unless
+# --force is used, in which case they *should* be overwritten.
+# Additional wrinkle: in case automake got to the files we install
+# first, we need to *not* overwrite a newer copy supplied by them.
+
+# Prevent autoreconf from running aclocal, which might not exist,
+# or could barf over warnings in third-party macro files.
+AT_DATA([aclocal.m4])
+ACLOCAL=true
+export ACLOCAL
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU foo], [1.0])
+AC_CONFIG_AUX_DIR([build-aux])
+AC_PROG_INSTALL
+AC_CANONICAL_HOST
+AC_OUTPUT
+]])
+
+mkdir build-aux
+
+AT_DATA([build-aux/config-guess.old],
+[[#! /bin/sh
+timestamp='1970-01-01'
+printf '%s\n' 'frobozz-bogon-bogos1'
+]])
+
+AT_DATA([build-aux/config-sub.new],
+[[#! /bin/sh
+scriptversion='9999-12-31'
+printf '%s\n' "$*"
+]])
+
+AT_DATA([build-aux/install-sh.old],
+[[#! /bin/sh
+# Old versions of install-sh did not have a timestamp line.
+]])
+
+cp build-aux/config-guess.old build-aux/config.guess
+cp build-aux/config-sub.new build-aux/config.sub
+cp build-aux/install-sh.old build-aux/install-sh
+chmod +x build-aux/config.sub build-aux/config.guess build-aux/install-sh
+
+# This pass should not change any of the files.
+AT_CHECK([autoreconf --install])
+AT_CMP([build-aux/config-guess.old], [build-aux/config.guess])
+AT_CMP([build-aux/config-sub.new], [build-aux/config.sub])
+AT_CMP([build-aux/install-sh.old], [build-aux/install-sh])
+
+# This pass should change only config.guess and install-sh, not config.sub.
+AT_CHECK([autoreconf --install --force])
+AT_CHECK(
+  [if cmp build-aux/config-guess.old build-aux/config.guess > /dev/null 2>&1
+  then exit 1
+  fi])
+AT_CMP([build-aux/config-sub.new], [build-aux/config.sub])
+AT_CHECK(
+  [if cmp build-aux/install-sh.old build-aux/install-sh > /dev/null 2>&1
+  then exit 1
+  fi])
+
+
+AT_CLEANUP
+
+## ------------------------------ ##
+## Files clobbered by AC_OPENMP.  ##
+## ------------------------------ ##
+
+AT_SETUP([Files clobbered by AC_OPENMP])
+
+AT_CONFIGURE_AC(
+[[AC_PROG_CC
+AC_OPENMP
+]])
+
+AT_CHECK_AUTOHEADER
+
+# autoconf should bomb out if either 'mp' or 'openmp' exists in the
+# srcdir.
+AT_DATA([mp])
+AT_CHECK_AUTOCONF([], [1], [], [stderr])
+AT_CHECK([grep "clobbers files named 'mp' and 'penmp'" stderr],
+         [0], [ignore], [ignore])
+rm -f mp
+
+AT_DATA([penmp])
+AT_CHECK_AUTOCONF([], [1], [], [stderr])
+AT_CHECK([grep "clobbers files named 'mp' and 'penmp'" stderr],
+         [0], [ignore], [ignore])
+rm -f penmp
+
+# If neither of these files exist, autoconf should go through...
+AT_CHECK_AUTOCONF
+
+# ... but configure should bomb out, and *not* delete the files,
+# if they are added after autoconf is run.
+AT_DATA([mp])
+AT_CHECK_CONFIGURE([], [1], [], [stderr])
+AT_CHECK([test -e mp])
+AT_CHECK([grep "clobbers files named 'mp' and 'penmp'" stderr],
+         [0], [ignore], [ignore])
+rm -f mp
+
+AT_DATA([penmp])
+AT_CHECK_CONFIGURE([], [1], [], [stderr])
+AT_CHECK([test -e penmp])
+AT_CHECK([grep "clobbers files named 'mp' and 'penmp'" stderr],
+         [0], [ignore], [ignore])
+rm -f penmp
+
+AT_CHECK_CONFIGURE
+AT_CHECK_ENV
 
 AT_CLEANUP

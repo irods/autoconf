@@ -1,7 +1,8 @@
 # This file is part of Autoconf.			-*- Autoconf -*-
 # Type related macros: existence, sizeof, and structure members.
 #
-# Copyright (C) 2000-2002, 2004-2015 Free Software Foundation, Inc.
+# Copyright (C) 2000-2002, 2004-2017, 2020-2022 Free Software
+# Foundation, Inc.
 
 # This file is part of Autoconf.  This program is free
 # software; you can redistribute it and/or modify it under the
@@ -21,7 +22,7 @@
 # You should have received a copy of the GNU General Public License
 # and a copy of the Autoconf Configure Script Exception along with
 # this program; see the files COPYINGv3 and COPYING.EXCEPTION
-# respectively.  If not, see <http://www.gnu.org/licenses/>.
+# respectively.  If not, see <https://www.gnu.org/licenses/>.
 
 # Written by David MacKenzie, with help from
 # Franc,ois Pinard, Karl Berry, Richard Pixley, Ian Lance Taylor,
@@ -116,10 +117,10 @@
 #
 #	  if (sizeof (TYPE))
 #
-# to `read' sizeof (to avoid warnings), while not depending on its type
+# to 'read' sizeof (to avoid warnings), while not depending on its type
 # (not necessarily size_t etc.).
 #
-# C++ disallows defining types inside `sizeof ()', but that's OK,
+# C++ disallows defining types inside 'sizeof ()', but that's OK,
 # since we don't want to consider unnamed structs to be types for C++,
 # precisely because they don't work in cases like that.
 m4_define([_AC_CHECK_TYPE_NEW_BODY],
@@ -166,7 +167,7 @@ AS_VAR_POPDEF([ac_Type])dnl
 # to _AC_CHECK_TYPE_NEW that are based on TYPE.
 m4_define([_AC_CHECK_TYPES],
 [[$1], [AC_DEFINE_UNQUOTED(AS_TR_CPP([HAVE_$1]), [1],
-  [Define to 1 if the system has the type `$1'.])]])
+  [Define to 1 if the system has the type '$1'.])]])
 
 
 # AC_CHECK_TYPES(TYPES,
@@ -188,17 +189,17 @@ $2], [$3], [$4])], [], $1)])
 m4_define([_AC_CHECK_TYPE_OLD],
 [_AC_CHECK_TYPE_NEW([$1],,
    [AC_DEFINE_UNQUOTED([$1], [$2],
-		       [Define to `$2' if <sys/types.h> does not define.])])dnl
+		       [Define to '$2' if <sys/types.h> does not define.])])dnl
 ])# _AC_CHECK_TYPE_OLD
 
 
 # _AC_CHECK_TYPE_REPLACEMENT_TYPE_P(STRING)
 # -----------------------------------------
-# Return `1' if STRING seems to be a builtin C/C++ type, i.e., if it
-# starts with `_Bool', `bool', `char', `double', `float', `int',
-# `long', `short', `signed', or `unsigned' followed by characters
+# Return '1' if STRING seems to be a builtin C/C++ type, i.e., if it
+# starts with '_Bool', 'bool', 'char', 'double', 'float', 'int',
+# 'long', 'short', 'signed', or 'unsigned' followed by characters
 # that are defining types.
-# Because many people have used `off_t' and `size_t' too, they are added
+# Because many people have used 'off_t' and 'size_t' too, they are added
 # for better common-use backward compatibility.
 m4_define([_AC_CHECK_TYPE_REPLACEMENT_TYPE_P],
 [m4_bmatch([$1],
@@ -209,7 +210,7 @@ m4_define([_AC_CHECK_TYPE_REPLACEMENT_TYPE_P],
 
 # _AC_CHECK_TYPE_MAYBE_TYPE_P(STRING)
 # -----------------------------------
-# Return `1' if STRING looks like a C/C++ type.
+# Return '1' if STRING looks like a C/C++ type.
 m4_define([_AC_CHECK_TYPE_MAYBE_TYPE_P],
 [m4_bmatch([$1], [^[_a-zA-Z0-9 ]+\([_a-zA-Z0-9() *]\|\[\|\]\)*$],
 	  1, 0)dnl
@@ -226,7 +227,7 @@ m4_define([_AC_CHECK_TYPE_MAYBE_TYPE_P],
 # Dispatch respectively to _AC_CHECK_TYPE_OLD or _AC_CHECK_TYPE_NEW.
 # 1. More than two arguments	     => NEW
 # 2. $2 seems to be replacement type => OLD
-#    See _AC_CHECK_TYPE_REPLACEMENT_TYPE_P for `replacement type'.
+#    See _AC_CHECK_TYPE_REPLACEMENT_TYPE_P for 'replacement type'.
 # 3. $2 seems to be a type	     => NEW plus a warning
 # 4. default			     => NEW
 AC_DEFUN([AC_CHECK_TYPE],
@@ -237,8 +238,8 @@ AC_DEFUN([AC_CHECK_TYPE],
 	 [_AC_CHECK_TYPE_REPLACEMENT_TYPE_P([$2])], [1],
   [_AC_CHECK_TYPE_OLD],
 	 [_AC_CHECK_TYPE_MAYBE_TYPE_P([$2])], [1],
-  [AC_DIAGNOSE([syntax],
-	       [$0: assuming `$2' is not a type])_AC_CHECK_TYPE_NEW],
+  [m4_warn([syntax],
+	   [$0: assuming '$2' is not a type])_AC_CHECK_TYPE_NEW],
   [_AC_CHECK_TYPE_NEW])($@)])# AC_CHECK_TYPE
 
 
@@ -295,7 +296,7 @@ if test $ac_cv_type_getgroups = cross; then
 fi])
 AC_DEFINE_UNQUOTED(GETGROUPS_T, $ac_cv_type_getgroups,
 		   [Define to the type of elements in the array set by
-		    `getgroups'. Usually this is either `int' or `gid_t'.])
+		    'getgroups'. Usually this is either 'int' or 'gid_t'.])
 ])# AC_TYPE_GETGROUPS
 
 
@@ -312,7 +313,7 @@ AC_DEFUN([AC_TYPE_INTMAX_T],
   AC_REQUIRE([AC_TYPE_LONG_LONG_INT])
   AC_CHECK_TYPE([intmax_t],
     [AC_DEFINE([HAVE_INTMAX_T], 1,
-       [Define to 1 if the system has the type `intmax_t'.])],
+       [Define to 1 if the system has the type 'intmax_t'.])],
     [test $ac_cv_type_long_long_int = yes \
        && ac_type='long long int' \
        || ac_type='long int'
@@ -329,7 +330,7 @@ AC_DEFUN([AC_TYPE_UINTMAX_T],
   AC_REQUIRE([AC_TYPE_UNSIGNED_LONG_LONG_INT])
   AC_CHECK_TYPE([uintmax_t],
     [AC_DEFINE([HAVE_UINTMAX_T], 1,
-       [Define to 1 if the system has the type `uintmax_t'.])],
+       [Define to 1 if the system has the type 'uintmax_t'.])],
     [test $ac_cv_type_unsigned_long_long_int = yes \
        && ac_type='unsigned long long int' \
        || ac_type='unsigned long int'
@@ -345,7 +346,7 @@ AC_DEFUN([AC_TYPE_INTPTR_T],
 [
   AC_CHECK_TYPE([intptr_t],
     [AC_DEFINE([HAVE_INTPTR_T], 1,
-       [Define to 1 if the system has the type `intptr_t'.])],
+       [Define to 1 if the system has the type 'intptr_t'.])],
     [for ac_type in 'int' 'long int' 'long long int'; do
        AC_COMPILE_IFELSE(
 	 [AC_LANG_BOOL_COMPILE_TRY(
@@ -367,7 +368,7 @@ AC_DEFUN([AC_TYPE_UINTPTR_T],
 [
   AC_CHECK_TYPE([uintptr_t],
     [AC_DEFINE([HAVE_UINTPTR_T], 1,
-       [Define to 1 if the system has the type `uintptr_t'.])],
+       [Define to 1 if the system has the type 'uintptr_t'.])],
     [for ac_type in 'unsigned int' 'unsigned long int' \
 	'unsigned long long int'; do
        AC_COMPILE_IFELSE(
@@ -404,7 +405,7 @@ AC_DEFUN([AC_TYPE_LONG_DOUBLE],
      fi])
   if test $ac_cv_type_long_double = yes; then
     AC_DEFINE([HAVE_LONG_DOUBLE], 1,
-      [Define to 1 if the system has the type `long double'.])
+      [Define to 1 if the system has the type 'long double'.])
   fi
 ])
 
@@ -441,8 +442,8 @@ AC_DEFUN([AC_TYPE_LONG_DOUBLE_WIDER],
        ac_cv_type_long_double_wider=no)])
   if test $ac_cv_type_long_double_wider = yes; then
     AC_DEFINE([HAVE_LONG_DOUBLE_WIDER], 1,
-      [Define to 1 if the type `long double' works and has more range or
-       precision than `double'.])
+      [Define to 1 if the type 'long double' works and has more range or
+       precision than 'double'.])
   fi
 ])# AC_TYPE_LONG_DOUBLE_WIDER
 
@@ -455,12 +456,12 @@ AU_DEFUN([AC_C_LONG_DOUBLE],
     ac_cv_c_long_double=$ac_cv_type_long_double_wider
     if test $ac_cv_c_long_double = yes; then
       AC_DEFINE([HAVE_LONG_DOUBLE], 1,
-	[Define to 1 if the type `long double' works and has more range or
-	 precision than `double'.])
+	[Define to 1 if the type 'long double' works and has more range or
+	 precision than 'double'.])
     fi
   ],
-  [The macro `AC_C_LONG_DOUBLE' is obsolete.
-You should use `AC_TYPE_LONG_DOUBLE' or `AC_TYPE_LONG_DOUBLE_WIDER' instead.]
+  [The macro 'AC_C_LONG_DOUBLE' is obsolete.
+You should use 'AC_TYPE_LONG_DOUBLE' or 'AC_TYPE_LONG_DOUBLE_WIDER' instead.]
 )
 
 
@@ -517,7 +518,7 @@ AC_DEFUN([AC_TYPE_LONG_LONG_INT],
 	      [AC_LANG_PROGRAM(
 		 [[@%:@include <limits.h>
 		   @%:@ifndef LLONG_MAX
-		   @%:@ define HALF \
+		   @%:@ define HALF \\
 			    (1LL << (sizeof (long long int) * CHAR_BIT - 2))
 		   @%:@ define LLONG_MAX (HALF - 1 + HALF)
 		   @%:@endif]],
@@ -539,7 +540,7 @@ AC_DEFUN([AC_TYPE_LONG_LONG_INT],
       esac])
   if test $ac_cv_type_long_long_int = yes; then
     AC_DEFINE([HAVE_LONG_LONG_INT], [1],
-      [Define to 1 if the system has the type `long long int'.])
+      [Define to 1 if the system has the type 'long long int'.])
   fi
 ])
 
@@ -561,7 +562,7 @@ AC_DEFUN([AC_TYPE_UNSIGNED_LONG_LONG_INT],
      esac])
   if test $ac_cv_type_unsigned_long_long_int = yes; then
     AC_DEFINE([HAVE_UNSIGNED_LONG_LONG_INT], [1],
-      [Define to 1 if the system has the type `unsigned long long int'.])
+      [Define to 1 if the system has the type 'unsigned long long int'.])
   fi
 ])
 
@@ -596,8 +597,8 @@ AC_DEFUN([AC_TYPE_UID_T],
 [AC_EGREP_HEADER(uid_t, sys/types.h,
   ac_cv_type_uid_t=yes, ac_cv_type_uid_t=no)])
 if test $ac_cv_type_uid_t = no; then
-  AC_DEFINE(uid_t, int, [Define to `int' if <sys/types.h> doesn't define.])
-  AC_DEFINE(gid_t, int, [Define to `int' if <sys/types.h> doesn't define.])
+  AC_DEFINE(uid_t, int, [Define to 'int' if <sys/types.h> doesn't define.])
+  AC_DEFINE(gid_t, int, [Define to 'int' if <sys/types.h> doesn't define.])
 fi
 ])
 
@@ -609,7 +610,32 @@ AN_IDENTIFIER([ssize_t], [AC_TYPE_SSIZE_T])
 AC_DEFUN([AC_TYPE_SSIZE_T], [AC_CHECK_TYPE(ssize_t, int)])
 
 AN_IDENTIFIER([pid_t], [AC_TYPE_PID_T])
-AC_DEFUN([AC_TYPE_PID_T],  [AC_CHECK_TYPE(pid_t,  int)])
+AC_DEFUN([AC_TYPE_PID_T],
+[
+  AC_CHECK_TYPE([pid_t],
+    [],
+    [dnl On 64-bit native Microsoft Windows, define it to the equivalent of
+     dnl 'intptr_t' (= 'long long' = '__int64'), because that is the return type
+     dnl of the _spawnv* functions
+     dnl <https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/spawnvp-wspawnvp>
+     dnl and the argument type of the _cwait function
+     dnl <https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/cwait>.
+     dnl Otherwise (on 32-bit Microsoft Windows and on old Unix platforms),
+     dnl define it to 'int'.
+     AC_COMPILE_IFELSE(
+       [AC_LANG_PROGRAM([[
+          #if defined _WIN64 && !defined __CYGWIN__
+          LLP64
+          #endif
+          ]])
+       ],
+       [ac_pid_type='int'],
+       [ac_pid_type='__int64'])
+     AC_DEFINE_UNQUOTED([pid_t], [$ac_pid_type],
+       [Define as a signed integer type capable of holding a process identifier.])
+    ],
+    [AC_INCLUDES_DEFAULT])
+])
 
 AN_IDENTIFIER([off_t], [AC_TYPE_OFF_T])
 AC_DEFUN([AC_TYPE_OFF_T],  [AC_CHECK_TYPE(off_t,  long int)])
@@ -667,8 +693,8 @@ m4_define([_AC_TYPE_INT_BODY],
 
 # _AC_TYPE_INT(NBITS)
 # -------------------
-# Set a variable ac_cv_c_intNBITS_t to `yes' if intNBITS_t is available,
-# `no' if it is not and no replacement types could be found, and a C type
+# Set a variable ac_cv_c_intNBITS_t to 'yes' if intNBITS_t is available,
+# 'no' if it is not and no replacement types could be found, and a C type
 # if it is not available but a replacement signed integer type of width
 # exactly NBITS bits was found.  In the third case, intNBITS_t is AC_DEFINEd
 # to type, as well.
@@ -714,8 +740,8 @@ m4_define([_AC_TYPE_UNSIGNED_INT_BODY],
 
 # _AC_TYPE_UNSIGNED_INT(NBITS)
 # ----------------------------
-# Set a variable ac_cv_c_uintNBITS_t to `yes' if uintNBITS_t is available,
-# `no' if it is not and no replacement types could be found, and a C type
+# Set a variable ac_cv_c_uintNBITS_t to 'yes' if uintNBITS_t is available,
+# 'no' if it is not and no replacement types could be found, and a C type
 # if it is not available but a replacement unsigned integer type of width
 # exactly NBITS bits was found.  In the third case, uintNBITS_t is AC_DEFINEd
 # to type, as well.
@@ -758,9 +784,9 @@ AU_DEFUN([AC_TYPE_SIGNAL],
 		   [ac_cv_type_signal=void])])
 AC_DEFINE_UNQUOTED(RETSIGTYPE, $ac_cv_type_signal,
 		   [Define as the return type of signal handlers
-		    (`int' or `void').])
+		    ('int' or 'void').])
 ], [your code may safely assume C89 semantics that RETSIGTYPE is void.
-Remove this warning and the `AC_CACHE_CHECK' when you adjust the code.])
+Remove this warning and the 'AC_CACHE_CHECK' when you adjust the code.])
 
 
 ## ------------------------ ##
@@ -779,7 +805,7 @@ AC_DEFUN([AC_CHECK_SIZEOF],
 	       [m4_fatal([$0: requires literal arguments])])]dnl
 [# The cast to long int works around a bug in the HP C Compiler
 # version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
-# declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
+# declarations like 'int a3[[(sizeof (unsigned char)) >= 0]];'.
 # This bug is HP SR number 8606223364.
 _AC_CACHE_CHECK_INT([size of $1], [AS_TR_SH([ac_cv_sizeof_$1])],
   [(long int) (sizeof ($1))],
@@ -791,7 +817,7 @@ _AC_CACHE_CHECK_INT([size of $1], [AS_TR_SH([ac_cv_sizeof_$1])],
    fi])
 
 AC_DEFINE_UNQUOTED(AS_TR_CPP(sizeof_$1), $AS_TR_SH([ac_cv_sizeof_$1]),
-		   [The size of `$1', as computed by sizeof.])
+		   [The size of '$1', as computed by sizeof.])
 ])# AC_CHECK_SIZEOF
 
 
@@ -820,7 +846,7 @@ typedef struct { char x; $1 y; } ac__type_alignof_;],
    fi])
 
 AC_DEFINE_UNQUOTED(AS_TR_CPP(alignof_$3), $AS_TR_SH([ac_cv_alignof_$3]),
-		   [The normal alignment of `$1', in bytes.])
+		   [The normal alignment of '$1', in bytes.])
 ])# AC_CHECK_ALIGNOF
 
 
@@ -831,9 +857,9 @@ AU_DEFUN([AC_INT_16_BITS],
 [AC_CHECK_SIZEOF([int])
 test $ac_cv_sizeof_int = 2 &&
   AC_DEFINE(INT_16_BITS, 1,
-	    [Define to 1 if `sizeof (int)' = 2.  Obsolete, use `SIZEOF_INT'.])
-], [your code should no longer depend upon `INT_16_BITS', but upon
-`SIZEOF_INT == 2'.  Remove this warning and the `AC_DEFINE' when you
+	    [Define to 1 if 'sizeof (int)' = 2.  Obsolete, use 'SIZEOF_INT'.])
+], [your code should no longer depend upon 'INT_16_BITS', but upon
+'SIZEOF_INT == 2'.  Remove this warning and the 'AC_DEFINE' when you
 adjust the code.])
 
 
@@ -843,10 +869,10 @@ AU_DEFUN([AC_LONG_64_BITS],
 [AC_CHECK_SIZEOF([long int])
 test $ac_cv_sizeof_long_int = 8 &&
   AC_DEFINE(LONG_64_BITS, 1,
-	    [Define to 1 if `sizeof (long int)' = 8.  Obsolete, use
-	     `SIZEOF_LONG_INT'.])
-], [your code should no longer depend upon `LONG_64_BITS', but upon
-`SIZEOF_LONG_INT == 8'.  Remove this warning and the `AC_DEFINE' when
+	    [Define to 1 if 'sizeof (long int)' = 8.  Obsolete, use
+	     'SIZEOF_LONG_INT'.])
+], [your code should no longer depend upon 'LONG_64_BITS', but upon
+'SIZEOF_LONG_INT == 8'.  Remove this warning and the 'AC_DEFINE' when
 you adjust the code.])
 
 
@@ -884,7 +910,7 @@ return 0;])],
 #		  [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
 #		  [INCLUDES = DEFAULT-INCLUDES])
 # ---------------------------------------------------------
-# AGGREGATE.MEMBER is for instance `struct passwd.pw_gecos', shell
+# AGGREGATE.MEMBER is for instance 'struct passwd.pw_gecos', shell
 # variables are not a valid argument.
 AC_DEFUN([AC_CHECK_MEMBER],
 [AC_REQUIRE_SHELL_FN([ac_fn_]_AC_LANG_ABBREV[_check_member],
@@ -895,7 +921,7 @@ AC_DEFUN([AC_CHECK_MEMBER],
     [_$0_BODY])]dnl
 [AS_LITERAL_IF([$1], [], [m4_fatal([$0: requires literal arguments])])]dnl
 [m4_if(m4_index([$1], [.]), [-1],
-  [m4_fatal([$0: Did not see any dot in `$1'])])]dnl
+  [m4_fatal([$0: Did not see any dot in '$1'])])]dnl
 [AS_VAR_PUSHDEF([ac_Member], [ac_cv_member_$1])]dnl
 [ac_fn_[]_AC_LANG_ABBREV[]_check_member "$LINENO" ]dnl
 [m4_bpatsubst([$1], [^\([^.]*\)\.\(.*\)], ["\1" "\2"]) "ac_Member" ]dnl
@@ -911,8 +937,8 @@ AS_VAR_POPDEF([ac_Member])dnl
 # arguments to AC_CHECK_MEMBER that are based on AGGREGATE and MEMBER.
 m4_define([_AC_CHECK_MEMBERS],
 [[$1], [AC_DEFINE_UNQUOTED(AS_TR_CPP([HAVE_$1]), [1],
-  [Define to 1 if `]m4_bpatsubst([$1],
-    [^\([^.]*\)\.\(.*\)], [[\2' is a member of `\1]])['.])]])
+  [Define to 1 if ']m4_bpatsubst([$1],
+    [^\([^.]*\)\.\(.*\)], [[\2' is a member of '\1]])['.])]])
 
 # AC_CHECK_MEMBERS([AGGREGATE.MEMBER, ...],
 #		   [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
@@ -974,18 +1000,18 @@ AC_DEFUN([AC_STRUCT_DIRENT_D_TYPE], [_AC_STRUCT_DIRENT([d_type])])
 AU_DEFUN([AC_STRUCT_ST_BLKSIZE],
 [AC_CHECK_MEMBERS([struct stat.st_blksize],
 		 [AC_DEFINE(HAVE_ST_BLKSIZE, 1,
-			    [Define to 1 if your `struct stat' has
-			     `st_blksize'.  Deprecated, use
-			     `HAVE_STRUCT_STAT_ST_BLKSIZE' instead.])])
-], [your code should no longer depend upon `HAVE_ST_BLKSIZE', but
-`HAVE_STRUCT_STAT_ST_BLKSIZE'.  Remove this warning and
-the `AC_DEFINE' when you adjust the code.])# AC_STRUCT_ST_BLKSIZE
+			    [Define to 1 if your 'struct stat' has
+			     'st_blksize'.  Deprecated, use
+			     'HAVE_STRUCT_STAT_ST_BLKSIZE' instead.])])
+], [your code should no longer depend upon 'HAVE_ST_BLKSIZE', but
+'HAVE_STRUCT_STAT_ST_BLKSIZE'.  Remove this warning and
+the 'AC_DEFINE' when you adjust the code.])# AC_STRUCT_ST_BLKSIZE
 
 
 # AC_STRUCT_ST_BLOCKS
 # -------------------
-# If `struct stat' contains an `st_blocks' member, define
-# HAVE_STRUCT_STAT_ST_BLOCKS.  Otherwise, add `fileblocks.o' to the
+# If 'struct stat' contains an 'st_blocks' member, define
+# HAVE_STRUCT_STAT_ST_BLOCKS.  Otherwise, add 'fileblocks.o' to the
 # output variable LIBOBJS.  We still define HAVE_ST_BLOCKS for backward
 # compatibility.  In the future, we will activate specializations for
 # this macro, so don't obsolete it right now.
@@ -993,16 +1019,16 @@ the `AC_DEFINE' when you adjust the code.])# AC_STRUCT_ST_BLKSIZE
 # AC_OBSOLETE([$0], [; replace it with
 #   AC_CHECK_MEMBERS([struct stat.st_blocks],
 #		      [AC_LIBOBJ([fileblocks])])
-# Please note that it will define `HAVE_STRUCT_STAT_ST_BLOCKS',
-# and not `HAVE_ST_BLOCKS'.])dnl
+# Please note that it will define 'HAVE_STRUCT_STAT_ST_BLOCKS',
+# and not 'HAVE_ST_BLOCKS'.])dnl
 #
 AN_IDENTIFIER([st_blocks],  [AC_STRUCT_ST_BLOCKS])
 AC_DEFUN([AC_STRUCT_ST_BLOCKS],
 [AC_CHECK_MEMBERS([struct stat.st_blocks],
 		  [AC_DEFINE(HAVE_ST_BLOCKS, 1,
-			     [Define to 1 if your `struct stat' has
-			      `st_blocks'.  Deprecated, use
-			      `HAVE_STRUCT_STAT_ST_BLOCKS' instead.])],
+			     [Define to 1 if your 'struct stat' has
+			      'st_blocks'.  Deprecated, use
+			      'HAVE_STRUCT_STAT_ST_BLOCKS' instead.])],
 		  [AC_LIBOBJ([fileblocks])])
 ])# AC_STRUCT_ST_BLOCKS
 
@@ -1012,12 +1038,12 @@ AC_DEFUN([AC_STRUCT_ST_BLOCKS],
 AU_DEFUN([AC_STRUCT_ST_RDEV],
 [AC_CHECK_MEMBERS([struct stat.st_rdev],
 		 [AC_DEFINE(HAVE_ST_RDEV, 1,
-			    [Define to 1 if your `struct stat' has `st_rdev'.
-			     Deprecated, use `HAVE_STRUCT_STAT_ST_RDEV'
+			    [Define to 1 if your 'struct stat' has 'st_rdev'.
+			     Deprecated, use 'HAVE_STRUCT_STAT_ST_RDEV'
 			     instead.])])
-], [your code should no longer depend upon `HAVE_ST_RDEV', but
-`HAVE_STRUCT_STAT_ST_RDEV'.  Remove this warning and
-the `AC_DEFINE' when you adjust the code.])# AC_STRUCT_ST_RDEV
+], [your code should no longer depend upon 'HAVE_ST_RDEV', but
+'HAVE_STRUCT_STAT_ST_RDEV'.  Remove this warning and
+the 'AC_DEFINE' when you adjust the code.])# AC_STRUCT_ST_RDEV
 
 
 # AC_STRUCT_TM
@@ -1037,16 +1063,16 @@ AC_DEFUN([AC_STRUCT_TM],
 		   [ac_cv_struct_tm=sys/time.h])])
 if test $ac_cv_struct_tm = sys/time.h; then
   AC_DEFINE(TM_IN_SYS_TIME, 1,
-	    [Define to 1 if your <sys/time.h> declares `struct tm'.])
+	    [Define to 1 if your <sys/time.h> declares 'struct tm'.])
 fi
 ])# AC_STRUCT_TM
 
 
 # AC_STRUCT_TIMEZONE
 # ------------------
-# Figure out how to get the current timezone.  If `struct tm' has a
-# `tm_zone' member, define `HAVE_TM_ZONE'.  Otherwise, if the
-# external array `tzname' is found, define `HAVE_TZNAME'.
+# Figure out how to get the current timezone.  If 'struct tm' has a
+# 'tm_zone' member, define 'HAVE_TM_ZONE'.  Otherwise, if the
+# external array 'tzname' is found, define 'HAVE_TZNAME'.
 AN_IDENTIFIER([tm_zone], [AC_STRUCT_TIMEZONE])
 AC_DEFUN([AC_STRUCT_TIMEZONE],
 [AC_REQUIRE([AC_STRUCT_TM])dnl
@@ -1055,8 +1081,8 @@ AC_CHECK_MEMBERS([struct tm.tm_zone],,,[#include <sys/types.h>
 ])
 if test "$ac_cv_member_struct_tm_tm_zone" = yes; then
   AC_DEFINE(HAVE_TM_ZONE, 1,
-	    [Define to 1 if your `struct tm' has `tm_zone'. Deprecated, use
-	     `HAVE_STRUCT_TM_TM_ZONE' instead.])
+	    [Define to 1 if your 'struct tm' has 'tm_zone'. Deprecated, use
+	     'HAVE_STRUCT_TM_TM_ZONE' instead.])
 else
   AC_CHECK_DECLS([tzname], , , [#include <time.h>])
   AC_CACHE_CHECK(for tzname, ac_cv_var_tzname,
@@ -1071,8 +1097,8 @@ extern char *tzname[];
 		[ac_cv_var_tzname=no])])
   if test $ac_cv_var_tzname = yes; then
     AC_DEFINE(HAVE_TZNAME, 1,
-	      [Define to 1 if you don't have `tm_zone' but do have the external
-	       array `tzname'.])
+	      [Define to 1 if you don't have 'tm_zone' but do have the external
+	       array 'tzname'.])
   fi
 fi
 ])# AC_STRUCT_TIMEZONE

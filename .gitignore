@@ -43,14 +43,12 @@ Makefile.in
 /autom4te.cache
 /bin/autoheader
 /bin/autoconf
-/bin/autoconf.in
 /bin/autom4te
 /bin/autoreconf
 /bin/autoscan
 /bin/autoupdate
 /bin/ifnames
 /build-aux/elisp-comp
-/build-aux/install-sh
 /build-aux/mdate-sh
 /build-aux/missing
 /config.cache
@@ -71,7 +69,7 @@ Makefile.in
 /lib/autoscan/autoscan.list
 /lib/emacs/*.elc
 /lib/emacs/elc-stamp
-/lib/m4sugar/version.m4
+/lib/version.m4
 /log
 /man/*.[1-9]
 /man/autoscan.log

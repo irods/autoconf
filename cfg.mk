@@ -1,6 +1,6 @@
 # Customize maint.mk for Autoconf.            -*- Makefile -*-
-# Copyright (C) 2003-2004, 2006, 2008-2015 Free Software Foundation,
-# Inc.
+# Copyright (C) 2003-2004, 2006, 2008-2017, 2020-2022 Free Software
+# Foundation, Inc.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 # GNU General Public License for more details.
 
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # This file is '-include'd into GNUmakefile.
 
@@ -46,62 +46,10 @@ To: $(announcement_mail-$(RELEASE_TYPE))				\
 CC: $(announcement_Cc_)							\
 Mail-Followup-To: autoconf@gnu.org
 
-# Update files from gnulib.
-.PHONY: fetch gnulib-update autom4te-update
-fetch: gnulib-update autom4te-update
-
-gnulib-update:
-	cp $(gnulib_dir)/build-aux/announce-gen $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/config.guess $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/config.sub $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/gendocs.sh $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/git-version-gen $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/gitlog-to-changelog $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/gnupload $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/install-sh $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/mdate-sh $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/move-if-change $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/texinfo.tex $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/update-copyright $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/useless-if-before-free $(srcdir)/build-aux
-	cp $(gnulib_dir)/build-aux/vc-list-files $(srcdir)/build-aux
-	cp $(gnulib_dir)/doc/fdl.texi $(srcdir)/doc
-	cp $(gnulib_dir)/doc/gendocs_template $(srcdir)/doc
-	cp $(gnulib_dir)/doc/gnu-oids.texi $(srcdir)/doc
-	cp $(gnulib_dir)/doc/make-stds.texi $(srcdir)/doc
-	cp $(gnulib_dir)/doc/standards.texi $(srcdir)/doc
-	cp $(gnulib_dir)/m4/autobuild.m4 $(srcdir)/m4
-	cp $(gnulib_dir)/top/GNUmakefile $(srcdir)
-	cp $(gnulib_dir)/top/maint.mk $(srcdir)
-
-WGET = wget
-WGETFLAGS = -C off
-
-## Fetch the latest versions of files we care about.
-automake_gitweb = \
-  http://git.savannah.gnu.org/gitweb/?p=automake.git;a=blob_plain;hb=HEAD;
-autom4te_files = \
-  Autom4te/Channels.pm \
-  Autom4te/FileUtils.pm \
-  Autom4te/Getopt.pm \
-  Autom4te/XFile.pm
-
-move_if_change = '$(abs_srcdir)'/build-aux/move-if-change
-
-autom4te-update:
-	rm -fr Fetchdir > /dev/null 2>&1
-	mkdir -p Fetchdir/Autom4te
-	for file in $(autom4te_files); do \
-	  infile=`echo $$file | sed 's/Autom4te/Automake/g'`; \
-	  $(WGET) $(WGET_FLAGS) \
-	    "$(automake_gitweb)f=lib/$$infile" \
-	    -O "Fetchdir/$$file" || exit; \
-	done
-	perl -pi -e 's/Automake::/Autom4te::/g' Fetchdir/Autom4te/*.pm
-	for file in $(autom4te_files); do \
-	  $(move_if_change) Fetchdir/$$file $(srcdir)/lib/$$file || exit; \
-	done
-	rm -fr Fetchdir > /dev/null 2>&1
+# Update files maintained in gnulib and autom4te.
+.PHONY: fetch
+fetch:
+	$(PERL) $(srcdir)/build-aux/fetch.pl "$(abs_top_srcdir)"
 
 # Tests not to run.
 local-checks-to-skip ?= \
@@ -136,7 +84,10 @@ update-release-year:
 .PHONY: update-release-year
 
 # Prevent incorrect NEWS edits.
-old_NEWS_hash = 8532b4ed4fb456eb71071a5cf8c258d4
+old_NEWS_hash = 981169afdd2c97642125938f80a26b7f
+
+# Update autoconf-latest.tar.* symlinks during 'make stable/beta'.
+GNUPLOADFLAGS = --symlink-regex
 
 exclude_file_name_regexp--sc_prohibit_undesirable_word_seq = \
   ^(maint\.mk|build-aux/texinfo\.tex)$$

@@ -1,7 +1,8 @@
 # This file is part of Autoconf.			-*- Autoconf -*-
 # Macros that test for specific, unclassified, features.
 #
-# Copyright (C) 1992-1996, 1998-2015 Free Software Foundation, Inc.
+# Copyright (C) 1992-1996, 1998-2017, 2020-2022 Free Software
+# Foundation, Inc.
 
 # This file is part of Autoconf.  This program is free
 # software; you can redistribute it and/or modify it under the
@@ -21,7 +22,7 @@
 # You should have received a copy of the GNU General Public License
 # and a copy of the Autoconf Configure Script Exception along with
 # this program; see the files COPYINGv3 and COPYING.EXCEPTION
-# respectively.  If not, see <http://www.gnu.org/licenses/>.
+# respectively.  If not, see <https://www.gnu.org/licenses/>.
 
 # Written by David MacKenzie, with help from
 # Franc,ois Pinard, Karl Berry, Richard Pixley, Ian Lance Taylor,
@@ -84,6 +85,112 @@ AU_DEFUN([AC_ARG_ARRAY], [],
 with arguments. Remove this warning when you adjust your code.])
 
 
+# _AC_SYS_YEAR2038_TEST_INCLUDES
+# ------------------------------
+AC_DEFUN([_AC_SYS_YEAR2038_TEST_INCLUDES],
+[[
+  #include <time.h>
+  /* Check that time_t can represent 2**32 - 1 correctly.  */
+  #define LARGE_TIME_T \\
+    ((time_t) (((time_t) 1 << 30) - 1 + 3 * ((time_t) 1 << 30)))
+  int verify_time_t_range[(LARGE_TIME_T / 65537 == 65535
+                           && LARGE_TIME_T % 65537 == 0)
+                          ? 1 : -1];
+]])
+
+# _AC_SYS_YEAR2038(REQUIRE-YEAR2038-SAFE)
+# ---------------------------------------
+AC_DEFUN([_AC_SYS_YEAR2038],
+[
+ AC_ARG_ENABLE([year2038],
+   [  --disable-year2038      omit support for timestamps past the year 2038])
+ AS_IF([test "$enable_year2038" != no],
+ [
+  dnl On many systems, time_t is already a 64-bit type.
+  dnl On those systems where time_t is still 32-bit, it requires kernel
+  dnl and libc support to make it 64-bit. For glibc 2.34 and later on Linux,
+  dnl defining _TIME_BITS=64 and _FILE_OFFSET_BITS=64 is needed on x86 and ARM.
+  dnl
+  dnl On native Windows, the system include files define types __time32_t
+  dnl and __time64_t. By default, time_t is an alias of
+  dnl   - __time32_t on 32-bit mingw,
+  dnl   - __time64_t on 64-bit mingw and on MSVC (since MSVC 8).
+  dnl But when compiling with -D__MINGW_USE_VC2005_COMPAT, time_t is an
+  dnl alias of __time64_t.
+  dnl And when compiling with -D_USE_32BIT_TIME_T, time_t is an alias of
+  dnl __time32_t.
+  AC_CACHE_CHECK([for time_t past the year 2038], [ac_cv_type_time_t_y2038],
+    [AC_COMPILE_IFELSE(
+       [AC_LANG_SOURCE([_AC_SYS_YEAR2038_TEST_INCLUDES])],
+       [ac_cv_type_time_t_y2038=yes], [ac_cv_type_time_t_y2038=no])
+    ])
+  if test "$ac_cv_type_time_t_y2038" = no; then
+    AC_CACHE_CHECK([for 64-bit time_t with _TIME_BITS=64],
+      [ac_cv_type_time_t_bits_macro],
+      [AC_COMPILE_IFELSE(
+         [AC_LANG_SOURCE([[#define _TIME_BITS 64
+                           #define _FILE_OFFSET_BITS 64
+                           ]_AC_SYS_YEAR2038_TEST_INCLUDES])],
+         [ac_cv_type_time_t_bits_macro=yes],
+         [ac_cv_type_time_t_bits_macro=no])
+      ])
+    if test "$ac_cv_type_time_t_bits_macro" = yes; then
+      AC_DEFINE([_TIME_BITS], [64],
+        [Number of bits in a timestamp, on hosts where this is settable.])
+      dnl AC_SYS_LARGFILE also defines this; it's OK if we do too.
+      AC_DEFINE([_FILE_OFFSET_BITS], [64],
+        [Number of bits in a file offset, on hosts where this is settable.])
+      ac_cv_type_time_t_y2038=yes
+    fi
+  fi
+  if test $ac_cv_type_time_t_y2038 = no; then
+    AC_COMPILE_IFELSE(
+      [AC_LANG_SOURCE(
+         [[#ifdef _USE_32BIT_TIME_T
+             int ok;
+           #else
+             error fail
+           #endif
+         ]])],
+      [AC_MSG_FAILURE(
+         [The 'time_t' type stops working after January 2038.
+          Remove _USE_32BIT_TIME_T from the compiler flags.])],
+      [# If not cross-compiling and $1 says we should check,
+       # and 'touch' works with a large timestamp, then evidently wider time_t
+       # is desired and supported, so fail and ask the builder to fix the
+       # problem.  Otherwise, just warn the builder.
+       m4_ifval([$1],
+         [if test $cross_compiling = no \
+             && TZ=UTC0 touch -t 210602070628.15 conftest.time 2>/dev/null; then
+            case `TZ=UTC0 LC_ALL=C ls -l conftest.time 2>/dev/null` in
+              *'Feb  7  2106'* | *'Feb  7 17:10'*)
+                AC_MSG_FAILURE(
+                  [The 'time_t' type stops working after January 2038,
+                   and your system appears to support a wider 'time_t'.
+                   Try configuring with 'CC="${CC} -m64"'.
+                   To build with a 32-bit time_t anyway (not recommended),
+                   configure with '--disable-year2038'.]);;
+            esac
+            rm -f conftest.time
+          fi])
+       if test "$ac_warned_about_y2038" != yes; then
+         AC_MSG_WARN(
+           [The 'time_t' type stops working after January 2038,
+            and this package needs a wider 'time_t' type
+            if there is any way to access timestamps after that.
+            Configure with 'CC="${CC} -m64"' perhaps?])
+         ac_warned_about_y2038=yes
+       fi
+      ])
+  fi])
+])
+
+AC_DEFUN([AC_SYS_YEAR2038],
+[
+  _$0([require-year2038-safe])
+])
+
+
 # _AC_SYS_LARGEFILE_TEST_INCLUDES
 # -------------------------------
 m4_define([_AC_SYS_LARGEFILE_TEST_INCLUDES],
@@ -92,7 +199,7 @@ m4_define([_AC_SYS_LARGEFILE_TEST_INCLUDES],
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-@%:@define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+@%:@define LARGE_OFF_T (((off_t) 1 << 31 << 31) - 1 + ((off_t) 1 << 31 << 31))
   int off_t_is_large[[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1]];[]dnl
@@ -111,7 +218,8 @@ m4_define([_AC_SYS_LARGEFILE_MACRO_VALUE],
     [AC_LANG_PROGRAM([$5], [$6])],
     [$3=no; break])
   m4_ifval([$6], [AC_LINK_IFELSE], [AC_COMPILE_IFELSE])(
-    [AC_LANG_PROGRAM([@%:@define $1 $2
+    [AC_LANG_PROGRAM([#undef $1
+#define $1 $2
 $5], [$6])],
     [$3=$2; break])
   $3=unknown
@@ -130,13 +238,15 @@ rm -rf conftest*[]dnl
 # By default, many hosts won't let programs access large files;
 # one must use special compiler options to get large-file access to work.
 # For more details about this brain damage please see:
-# http://www.unix-systems.org/version2/whatsnew/lfs20mar.html
+# http://www.unix.org/version2/whatsnew/lfs20mar.html
+# Additionally, on Linux file systems with 64-bit inodes a file that happens
+# to have a 64-bit inode number cannot be accessed by 32-bit applications on
+# Linux x86/x86_64.  This can occur with file systems such as XFS and NFS.
 AC_DEFUN([AC_SYS_LARGEFILE],
 [AC_ARG_ENABLE(largefile,
 	       [  --disable-largefile     omit support for large files])
-if test "$enable_largefile" != no; then
-
-  AC_CACHE_CHECK([for special C compiler options needed for large files],
+AS_IF([test "$enable_largefile" != no],
+ [AC_CACHE_CHECK([for special C compiler options needed for large files],
     ac_cv_sys_largefile_CC,
     [ac_cv_sys_largefile_CC=no
      if test "$GCC" != yes; then
@@ -161,16 +271,19 @@ if test "$enable_largefile" != no; then
     ac_cv_sys_file_offset_bits,
     [Number of bits in a file offset, on hosts where this is settable.],
     [_AC_SYS_LARGEFILE_TEST_INCLUDES])
-  if test $ac_cv_sys_file_offset_bits = unknown; then
-    _AC_SYS_LARGEFILE_MACRO_VALUE(_LARGE_FILES, 1,
-      ac_cv_sys_large_files,
-      [Define for large files, on AIX-style hosts.],
-      [_AC_SYS_LARGEFILE_TEST_INCLUDES])
-  fi
+  AS_CASE([$ac_cv_sys_file_offset_bits],
+    [unknown],
+      [_AC_SYS_LARGEFILE_MACRO_VALUE([_LARGE_FILES], [1],
+         [ac_cv_sys_large_files],
+         [Define for large files, on AIX-style hosts.],
+         [_AC_SYS_LARGEFILE_TEST_INCLUDES])],
+    [64],
+      [_AC_SYS_YEAR2038()])])
 
-  AC_DEFINE([_DARWIN_USE_64_BIT_INODE], [1],
-    [Enable large inode numbers on Mac OS X 10.5.])
-fi
+  AH_VERBATIM([__MINGW_USE_VC2005_COMPAT],
+[#if !defined __MINGW_USE_VC2005_COMPAT && defined __MINGW32__
+# define __MINGW_USE_VC2005_COMPAT 1 /* For 64-bit time_t.  */
+#endif])
 ])# AC_SYS_LARGEFILE
 
 
@@ -179,12 +292,12 @@ fi
 # Security: use a temporary directory as the most portable way of
 # creating files in /tmp securely.  Removing them leaves a race
 # condition, set -C is not portably guaranteed to use O_EXCL, so still
-# leaves a race, and not all systems have the `mktemp' utility.  We
+# leaves a race, and not all systems have the 'mktemp' utility.  We
 # still test for existence first in case of broken systems where the
 # mkdir succeeds even when the directory exists.  Broken systems may
 # retain a race, but they probably have other security problems
 # anyway; this should be secure on well-behaved systems.  In any case,
-# use of `mktemp' is probably inappropriate here since it would fail in
+# use of 'mktemp' is probably inappropriate here since it would fail in
 # attempting to create different file names differing after the 14th
 # character on file systems without long file names.
 AC_DEFUN([AC_SYS_LONG_FILE_NAMES],
@@ -225,11 +338,11 @@ fi
 # AC_SYS_RESTARTABLE_SYSCALLS
 # ---------------------------
 # If the system automatically restarts a system call that is
-# interrupted by a signal, define `HAVE_RESTARTABLE_SYSCALLS'.
+# interrupted by a signal, define 'HAVE_RESTARTABLE_SYSCALLS'.
 AC_DEFUN([AC_SYS_RESTARTABLE_SYSCALLS],
-[AC_DIAGNOSE([obsolete],
+[m4_warn([obsolete],
 [$0: AC_SYS_RESTARTABLE_SYSCALLS is useful only when supporting very
-old systems that lack `sigaction' and `SA_RESTART'.  Don't bother with
+old systems that lack 'sigaction' and 'SA_RESTART'.  Don't bother with
 this macro unless you need to support very old systems like 4.2BSD and
 SVR3.])dnl
 AC_REQUIRE([AC_HEADER_SYS_WAIT])dnl
@@ -357,63 +470,115 @@ matches *mingw32*])# AC_MINGW32
 # ------------------------
 # Enable extensions on systems that normally disable them,
 # typically due to standards-conformance issues.
-#
-# Remember that #undef in AH_VERBATIM gets replaced with #define by
-# AC_DEFINE.  The goal here is to define all known feature-enabling
-# macros, then, if reports of conflicts are made, disable macros that
-# cause problems on some platforms (such as __EXTENSIONS__).
+# We unconditionally define as many of the known feature-enabling
+# as possible, reserving conditional behavior for macros that are
+# known to cause problems on some platforms (such as __EXTENSIONS__).
 AC_DEFUN_ONCE([AC_USE_SYSTEM_EXTENSIONS],
-[AC_BEFORE([$0], [AC_COMPILE_IFELSE])dnl
+[AC_BEFORE([$0], [AC_PREPROC_IFELSE])dnl
+AC_BEFORE([$0], [AC_COMPILE_IFELSE])dnl
+AC_BEFORE([$0], [AC_LINK_IFELSE])dnl
 AC_BEFORE([$0], [AC_RUN_IFELSE])dnl
-
-  AC_CHECK_HEADER([minix/config.h], [MINIX=yes], [MINIX=])
-  if test "$MINIX" = yes; then
-    AC_DEFINE([_POSIX_SOURCE], [1],
-      [Define to 1 if you need to in order for 'stat' and other
-       things to work.])
-    AC_DEFINE([_POSIX_1_SOURCE], [2],
-      [Define to 2 if the system does not provide POSIX.1 features
-       except with this defined.])
-    AC_DEFINE([_MINIX], [1],
-      [Define to 1 if on MINIX.])
-    AC_DEFINE([_NETBSD_SOURCE], [1],
-      [Define to 1 to make NetBSD features available.  MINIX 3 needs this.])
-  fi
-
+AC_BEFORE([$0], [AC_CHECK_INCLUDES_DEFAULT])dnl
+dnl #undef in AH_VERBATIM gets replaced with #define by AC_DEFINE.
 dnl Use a different key than __EXTENSIONS__, as that name broke existing
 dnl configure.ac when using autoheader 2.62.
-  AH_VERBATIM([USE_SYSTEM_EXTENSIONS],
+dnl The macros below are in alphabetical order ignoring leading _ or __
+dnl prefixes.
+AH_VERBATIM([USE_SYSTEM_EXTENSIONS],
 [/* Enable extensions on AIX 3, Interix.  */
 #ifndef _ALL_SOURCE
 # undef _ALL_SOURCE
 #endif
-/* Enable general extensions on OS X.  */
+/* Enable general extensions on macOS.  */
 #ifndef _DARWIN_C_SOURCE
 # undef _DARWIN_C_SOURCE
-#endif
-/* Enable GNU extensions on systems that have them.  */
-#ifndef _GNU_SOURCE
-# undef _GNU_SOURCE
-#endif
-/* Enable threading extensions on Solaris.  */
-#ifndef _POSIX_PTHREAD_SEMANTICS
-# undef _POSIX_PTHREAD_SEMANTICS
-#endif
-/* Enable extensions on HP NonStop.  */
-#ifndef _TANDEM_SOURCE
-# undef _TANDEM_SOURCE
-#endif
-/* Enable X/Open extensions if necessary.  HP-UX 11.11 defines
-   mbstate_t only if _XOPEN_SOURCE is defined to 500, regardless of
-   whether compiling with -Ae or -D_HPUX_SOURCE=1.  */
-#ifndef _XOPEN_SOURCE
-# undef _XOPEN_SOURCE
 #endif
 /* Enable general extensions on Solaris.  */
 #ifndef __EXTENSIONS__
 # undef __EXTENSIONS__
 #endif
-])
+/* Enable GNU extensions on systems that have them.  */
+#ifndef _GNU_SOURCE
+# undef _GNU_SOURCE
+#endif
+/* Enable X/Open compliant socket functions that do not require linking
+   with -lxnet on HP-UX 11.11.  */
+#ifndef _HPUX_ALT_XOPEN_SOCKET_API
+# undef _HPUX_ALT_XOPEN_SOCKET_API
+#endif
+/* Identify the host operating system as Minix.
+   This macro does not affect the system headers' behavior.
+   A future release of Autoconf may stop defining this macro.  */
+#ifndef _MINIX
+# undef _MINIX
+#endif
+/* Enable general extensions on NetBSD.
+   Enable NetBSD compatibility extensions on Minix.  */
+#ifndef _NETBSD_SOURCE
+# undef _NETBSD_SOURCE
+#endif
+/* Enable OpenBSD compatibility extensions on NetBSD.
+   Oddly enough, this does nothing on OpenBSD.  */
+#ifndef _OPENBSD_SOURCE
+# undef _OPENBSD_SOURCE
+#endif
+/* Define to 1 if needed for POSIX-compatible behavior.  */
+#ifndef _POSIX_SOURCE
+# undef _POSIX_SOURCE
+#endif
+/* Define to 2 if needed for POSIX-compatible behavior.  */
+#ifndef _POSIX_1_SOURCE
+# undef _POSIX_1_SOURCE
+#endif
+/* Enable POSIX-compatible threading on Solaris.  */
+#ifndef _POSIX_PTHREAD_SEMANTICS
+# undef _POSIX_PTHREAD_SEMANTICS
+#endif
+/* Enable extensions specified by ISO/IEC TS 18661-5:2014.  */
+#ifndef __STDC_WANT_IEC_60559_ATTRIBS_EXT__
+# undef __STDC_WANT_IEC_60559_ATTRIBS_EXT__
+#endif
+/* Enable extensions specified by ISO/IEC TS 18661-1:2014.  */
+#ifndef __STDC_WANT_IEC_60559_BFP_EXT__
+# undef __STDC_WANT_IEC_60559_BFP_EXT__
+#endif
+/* Enable extensions specified by ISO/IEC TS 18661-2:2015.  */
+#ifndef __STDC_WANT_IEC_60559_DFP_EXT__
+# undef __STDC_WANT_IEC_60559_DFP_EXT__
+#endif
+/* Enable extensions specified by ISO/IEC TS 18661-4:2015.  */
+#ifndef __STDC_WANT_IEC_60559_FUNCS_EXT__
+# undef __STDC_WANT_IEC_60559_FUNCS_EXT__
+#endif
+/* Enable extensions specified by ISO/IEC TS 18661-3:2015.  */
+#ifndef __STDC_WANT_IEC_60559_TYPES_EXT__
+# undef __STDC_WANT_IEC_60559_TYPES_EXT__
+#endif
+/* Enable extensions specified by ISO/IEC TR 24731-2:2010.  */
+#ifndef __STDC_WANT_LIB_EXT2__
+# undef __STDC_WANT_LIB_EXT2__
+#endif
+/* Enable extensions specified by ISO/IEC 24747:2009.  */
+#ifndef __STDC_WANT_MATH_SPEC_FUNCS__
+# undef __STDC_WANT_MATH_SPEC_FUNCS__
+#endif
+/* Enable extensions on HP NonStop.  */
+#ifndef _TANDEM_SOURCE
+# undef _TANDEM_SOURCE
+#endif
+/* Enable X/Open extensions.  Define to 500 only if necessary
+   to make mbstate_t available.  */
+#ifndef _XOPEN_SOURCE
+# undef _XOPEN_SOURCE
+#endif
+])dnl
+
+  AC_REQUIRE([AC_CHECK_INCLUDES_DEFAULT])dnl
+  _AC_CHECK_HEADER_ONCE([wchar.h])
+  _AC_CHECK_HEADER_ONCE([minix/config.h])
+
+dnl Defining __EXTENSIONS__ may break the system headers on some systems.
+dnl (FIXME: Which ones?)
   AC_CACHE_CHECK([whether it is safe to define __EXTENSIONS__],
     [ac_cv_safe_to_define___extensions__],
     [AC_COMPILE_IFELSE(
@@ -422,29 +587,54 @@ dnl configure.ac when using autoheader 2.62.
           ]AC_INCLUDES_DEFAULT])],
        [ac_cv_safe_to_define___extensions__=yes],
        [ac_cv_safe_to_define___extensions__=no])])
-  test $ac_cv_safe_to_define___extensions__ = yes &&
-    AC_DEFINE([__EXTENSIONS__])
-  AC_DEFINE([_ALL_SOURCE])
-  AC_DEFINE([_DARWIN_C_SOURCE])
-  AC_DEFINE([_GNU_SOURCE])
-  AC_DEFINE([_POSIX_PTHREAD_SEMANTICS])
-  AC_DEFINE([_TANDEM_SOURCE])
+
+dnl HP-UX 11.11 defines mbstate_t only if _XOPEN_SOURCE is defined to
+dnl 500, regardless of whether compiling with -Ae or -D_HPUX_SOURCE=1.
+dnl But defining _XOPEN_SOURCE may turn *off* extensions on platforms
+dnl not covered by turn-on-extensions macros (notably Dragonfly, Free,
+dnl and OpenBSD, which don't have any equivalent of _NETBSD_SOURCE) so
+dnl it should only be defined when necessary.
   AC_CACHE_CHECK([whether _XOPEN_SOURCE should be defined],
     [ac_cv_should_define__xopen_source],
     [ac_cv_should_define__xopen_source=no
-     AC_COMPILE_IFELSE(
-       [AC_LANG_PROGRAM([[
+    AS_IF([test $ac_cv_header_wchar_h = yes],
+      [AC_COMPILE_IFELSE(
+        [AC_LANG_PROGRAM([[
           #include <wchar.h>
           mbstate_t x;]])],
-       [],
-       [AC_COMPILE_IFELSE(
+        [],
+        [AC_COMPILE_IFELSE(
           [AC_LANG_PROGRAM([[
-             #define _XOPEN_SOURCE 500
-             #include <wchar.h>
-             mbstate_t x;]])],
-          [ac_cv_should_define__xopen_source=yes])])])
-  test $ac_cv_should_define__xopen_source = yes &&
-    AC_DEFINE([_XOPEN_SOURCE], [500])
+            #define _XOPEN_SOURCE 500
+            #include <wchar.h>
+            mbstate_t x;]])],
+          [ac_cv_should_define__xopen_source=yes])])])])
+
+  AC_DEFINE([_ALL_SOURCE])
+  AC_DEFINE([_DARWIN_C_SOURCE])
+  AC_DEFINE([_GNU_SOURCE])
+  AC_DEFINE([_HPUX_ALT_XOPEN_SOCKET_API])
+  AC_DEFINE([_NETBSD_SOURCE])
+  AC_DEFINE([_OPENBSD_SOURCE])
+  AC_DEFINE([_POSIX_PTHREAD_SEMANTICS])
+  AC_DEFINE([__STDC_WANT_IEC_60559_ATTRIBS_EXT__])
+  AC_DEFINE([__STDC_WANT_IEC_60559_BFP_EXT__])
+  AC_DEFINE([__STDC_WANT_IEC_60559_DFP_EXT__])
+  AC_DEFINE([__STDC_WANT_IEC_60559_FUNCS_EXT__])
+  AC_DEFINE([__STDC_WANT_IEC_60559_TYPES_EXT__])
+  AC_DEFINE([__STDC_WANT_LIB_EXT2__])
+  AC_DEFINE([__STDC_WANT_MATH_SPEC_FUNCS__])
+  AC_DEFINE([_TANDEM_SOURCE])
+  AS_IF([test $ac_cv_header_minix_config_h = yes],
+    [MINIX=yes
+    AC_DEFINE([_MINIX])
+    AC_DEFINE([_POSIX_SOURCE])
+    AC_DEFINE([_POSIX_1_SOURCE], [2])],
+    [MINIX=])
+  AS_IF([test $ac_cv_safe_to_define___extensions__ = yes],
+    [AC_DEFINE([__EXTENSIONS__])])
+  AS_IF([test $ac_cv_should_define__xopen_source = yes],
+    [AC_DEFINE([_XOPEN_SOURCE], [500])])
 ])# AC_USE_SYSTEM_EXTENSIONS
 
 
@@ -486,7 +676,7 @@ AC_EGREP_CPP([yes],
 AC_HEADER_DIRENT[]dnl
 ],
 [You shouldn't need to depend upon XENIX.  Remove the
-`AC_MSG_CHECKING', `AC_EGREP_CPP', and this warning if this part
+'AC_MSG_CHECKING', 'AC_EGREP_CPP', and this warning if this part
 of the test is useless.])
 
 

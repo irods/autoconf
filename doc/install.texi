@@ -5,8 +5,8 @@
 
 @unnumbered Installation Instructions
 
-Copyright @copyright{} 1994-1996, 1999-2002, 2004-2015 Free Software
-Foundation, Inc.
+Copyright @copyright{} 1994--1996, 1999--2002, 2004--2017, 2020--2022
+Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification, are
 permitted in any medium without royalty provided the copyright notice
@@ -262,7 +262,7 @@ use an ANSI C compiler:
 @noindent
 and if that doesn't work, install pre-built binaries of GCC for HP-UX.
 
-HP-UX @command{make} updates targets which have the same time stamps as
+HP-UX @command{make} updates targets which have the same timestamps as
 their prerequisites, which makes it generally unusable when shipped
 generated files such as @command{configure} are involved.  Use GNU
 @command{make} instead.

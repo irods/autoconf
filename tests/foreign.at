@@ -1,8 +1,9 @@
 #							-*- Autotest -*-
 
-AT_BANNER([Compatibility with other tools.])
+AT_BANNER([Compatibility with external tools and macros.])
 
-# Copyright (C) 2000-2007, 2009-2015 Free Software Foundation, Inc.
+# Copyright (C) 2000-2007, 2009-2017, 2020-2022 Free Software
+# Foundation, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +16,7 @@ AT_BANNER([Compatibility with other tools.])
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 ## --------- ##
@@ -121,20 +122,115 @@ copy-shtool:
 : >file1
 : >file2
 chmod +x file1
-: "${MAKE=make}"
 mkdir build-aux inst
 instdir=`pwd`/inst
 AT_CHECK_AUTOCONF
 cp "$abs_top_srcdir/build-aux/install-sh" build-aux
 AT_CHECK_CONFIGURE
-AT_CHECK([$MAKE copy-shtool], [], [ignore], [ignore],
-	 [AT_CHECK([: >build-aux/shtool])])
+AT_SKIP_IF([grep 'SHTOOL = false' Makefile > /dev/null 2>&1])
+
+AT_CHECK_MAKE([copy-shtool])
+AT_CHECK([test -s build-aux/shtool])
+
+# AC_PROG_INSTALL should pick up shtool from build-aux, even though
+# we're forcing AC_PATH_PROG not to find it on the host system.
 rm -f build-aux/install-sh
 AT_CHECK_CONFIGURE([--prefix="$instdir" ac_cv_path_SHTOOL=false])
 AT_CHECK([grep '^ac_install_sh = .*shtool install -c' Makefile], [], [ignore])
-if test -s build-aux/shtool; then
-  AT_CHECK([$MAKE install], [], [ignore], [ignore])
-  AT_CHECK([test -f inst/file1 && test -f inst/file2 && test -x inst/file1])
-fi
+AT_CHECK_MAKE([install])
+AT_CHECK([test -f inst/file1 && test -f inst/file2 && test -x inst/file1])
+
+AT_CLEANUP
+
+AT_SETUP([AX_PROG_CC_FOR_BUILD])
+
+cp "$abs_top_srcdir/build-aux/install-sh" \
+   "$abs_top_srcdir/build-aux/config.guess" \
+   "$abs_top_srcdir/build-aux/config.sub" .
+
+# The Autoconf Macro Archive's AX_PROG_CC_FOR_BUILD invokes AC_PROG_CC
+# twice, with a whole bunch of shell variables renamed at the m4 level
+# the second time.  Git commit 18c140b50b0619454d4da50d58a318cc257d580a
+# broke this usage and the breakage went unnoticed for *eight years*.
+
+cp "$abs_top_srcdir/tests/data/ax_prog_cc_for_build_v18.m4" \
+   aclocal.m4
+
+AT_DATA([configure.ac],
+[[AC_INIT([foo], [1.0])
+AX_PROG_CC_FOR_BUILD
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+]])
+
+AT_DATA([Makefile.in],
+[[CC = @CC@
+CC_FOR_BUILD = @CC_FOR_BUILD@
+]])
+
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE
+
+AT_CHECK([grep '^CC = ..*$' Makefile > /dev/null 2>&1])
+AT_CHECK([grep '^CC_FOR_BUILD = ..*$' Makefile > /dev/null 2>&1])
+
+AT_CLEANUP
+
+AT_SETUP([AX_PROG_CXX_FOR_BUILD])
+
+cp "$abs_top_srcdir/build-aux/install-sh" \
+   "$abs_top_srcdir/build-aux/config.guess" \
+   "$abs_top_srcdir/build-aux/config.sub" .
+
+# The Autoconf Macro Archive's AX_PROG_CXX_FOR_BUILD invokes AC_PROG_CXX
+# twice, with a whole bunch of shell variables renamed at the m4 level
+# the second time.  This usage was never broken (unlike with AC_PROG_CC)
+# but it seems sensible to make sure it doesn't *get* broken.
+
+cat "$abs_top_srcdir/tests/data/ax_prog_cc_for_build_v18.m4" \
+    "$abs_top_srcdir/tests/data/ax_prog_cxx_for_build_v3.m4" \
+   > aclocal.m4
+
+AT_DATA([configure.ac],
+[[AC_INIT([foo], [1.0])
+AX_PROG_CXX_FOR_BUILD
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+]])
+
+AT_DATA([Makefile.in],
+[[CXX = @CXX@
+CXX_FOR_BUILD = @CXX_FOR_BUILD@
+]])
+
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE
+
+AT_CHECK([grep '^CXX = ..*$' Makefile > /dev/null 2>&1])
+AT_CHECK([grep '^CXX_FOR_BUILD = ..*$' Makefile > /dev/null 2>&1])
+
+AT_CLEANUP
+
+
+AT_SETUP([gnulib-std-gnu11.m4])
+
+# Gnulib's std-gnu11.m4 (last significant change 2016-03-15) overrides
+# most but not all of the internal macros used by AC_PROG_CC and AC_PROG_CXX.
+# Commit 131d8c69f31dc6fc8dc93abe1096d52d1fe19fd3 changed the calling
+# convention of _AC_C_STD_TRY, causing configure scripts that load
+# std-gnu11.m4 to have shell syntax errors.
+
+cp "$abs_top_srcdir/tests/data/gnulib_std_gnu11_2020_08_17.m4" \
+   aclocal.m4
+
+AT_DATA([configure.ac],
+[[AC_INIT([foo], [1.0])
+AC_PROG_CC
+AC_PROG_CXX
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE
 
 AT_CLEANUP

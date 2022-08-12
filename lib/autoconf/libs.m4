@@ -1,6 +1,6 @@
 # This file is part of Autoconf.                       -*- Autoconf -*-
 # Checking for libraries.
-# Copyright (C) 1992-1996, 1998-2006, 2008-2015 Free Software
+# Copyright (C) 1992-1996, 1998-2006, 2008-2017, 2020-2022 Free Software
 # Foundation, Inc.
 
 # This file is part of Autoconf.  This program is free
@@ -21,7 +21,7 @@
 # You should have received a copy of the GNU General Public License
 # and a copy of the Autoconf Configure Script Exception along with
 # this program; see the files COPYINGv3 and COPYING.EXCEPTION
-# respectively.  If not, see <http://www.gnu.org/licenses/>.
+# respectively.  If not, see <https://www.gnu.org/licenses/>.
 
 # Written by David MacKenzie, with help from
 # Franc,ois Pinard, Karl Berry, Richard Pixley, Ian Lance Taylor,
@@ -92,16 +92,16 @@ AS_VAR_POPDEF([ac_Search])dnl
 # whatever the FUNCTION, in addition to not being a *S macro.  Note
 # that the cache does depend upon the function we are looking for.
 #
-# It is on purpose we used `ac_check_lib_save_LIBS' and not just
-# `ac_save_LIBS': there are many macros which don't want to see `LIBS'
-# changed but still want to use AC_CHECK_LIB, so they save `LIBS'.
-# And ``ac_save_LIBS' is too tempting a name, so let's leave them some
+# It is on purpose we used 'ac_check_lib_save_LIBS' and not just
+# 'ac_save_LIBS': there are many macros which don't want to see 'LIBS'
+# changed but still want to use AC_CHECK_LIB, so they save 'LIBS'.
+# And 'ac_save_LIBS' is too tempting a name, so let's leave them some
 # freedom.
 AC_DEFUN([AC_CHECK_LIB],
 [m4_ifval([$3], , [AH_CHECK_LIB([$1])])dnl
 AS_LITERAL_WORD_IF([$1],
 	      [AS_VAR_PUSHDEF([ac_Lib], [ac_cv_lib_$1_$2])],
-	      [AS_VAR_PUSHDEF([ac_Lib], [ac_cv_lib_$1''_$2])])dnl
+	      [AS_VAR_PUSHDEF([ac_Lib], [ac_cv_lib_$1""_$2])])dnl
 AC_CACHE_CHECK([for $2 in -l$1], [ac_Lib],
 [ac_check_lib_save_LIBS=$LIBS
 LIBS="-l$1 $5 $LIBS"
@@ -122,7 +122,7 @@ AS_VAR_POPDEF([ac_Lib])dnl
 # ---------------------
 m4_define([AH_CHECK_LIB],
 [AH_TEMPLATE(AS_TR_CPP([HAVE_LIB$1]),
-	     [Define to 1 if you have the `$1' library (-l$1).])])
+	     [Define to 1 if you have the '$1' library (-l$1).])])
 
 
 # AC_HAVE_LIBRARY(LIBRARY,
@@ -130,10 +130,10 @@ m4_define([AH_CHECK_LIB],
 #                 [OTHER-LIBRARIES])
 # ---------------------------------------------------------
 #
-# This macro is equivalent to calling `AC_CHECK_LIB' with a FUNCTION
-# argument of `main'.  In addition, LIBRARY can be written as any of
-# `foo', `-lfoo', or `libfoo.a'.  In all of those cases, the compiler
-# is passed `-lfoo'.  However, LIBRARY cannot be a shell variable;
+# This macro is equivalent to calling 'AC_CHECK_LIB' with a FUNCTION
+# argument of 'main'.  In addition, LIBRARY can be written as any of
+# 'foo', '-lfoo', or 'libfoo.a'.  In all of those cases, the compiler
+# is passed '-lfoo'.  However, LIBRARY cannot be a shell variable;
 # it must be a literal name.
 AU_DEFUN([AC_HAVE_LIBRARY],
 [m4_pushdef([AC_Lib_Name],
@@ -298,22 +298,34 @@ fi # $ac_x_libraries = no
 # ----------
 # Compute ac_cv_have_x.
 AC_DEFUN([_AC_PATH_X],
+[AC_REQUIRE([AC_PROG_CC])]dnl To ensure that $cross_compiling is finalized.
 [AC_CACHE_VAL(ac_cv_have_x,
 [# One or both of the vars are not set, and there is no cached value.
-ac_x_includes=no ac_x_libraries=no
-_AC_PATH_X_XMKMF
-_AC_PATH_X_DIRECT
-case $ac_x_includes,$ac_x_libraries in #(
-  no,* | *,no | *\'*)
-    # Didn't find X, or a directory has "'" in its name.
-    ac_cv_have_x="have_x=no";; #(
-  *)
-    # Record where we found X for the cache.
+ac_x_includes=no
+ac_x_libraries=no
+# Do we need to do anything special at all?
+ac_save_LIBS=$LIBS
+LIBS="-lX11 $LIBS"
+AC_LINK_IFELSE([AC_LANG_PROGRAM([@%:@include <X11/Xlib.h>],
+				[XrmInitialize ()])],
+  [# We can compile and link X programs with no special options.
+  ac_x_includes=
+  ac_x_libraries=])
+LIBS="$ac_save_LIBS"
+# If that didn't work, only try xmkmf and file system searches
+# for native compilation.
+AS_IF([test x"$ac_x_includes" = xno && test "$cross_compiling" = no],
+  [_AC_PATH_X_XMKMF
+  _AC_PATH_X_DIRECT])
+# Record the results.
+AS_CASE([$ac_x_includes,$ac_x_libraries],
+  [no,* | *,no | *\'*],
+    [# Didn't find X, or a directory has "'" in its name.
+    ac_cv_have_x="have_x=no"],
+    [# Record where we found X for the cache.
     ac_cv_have_x="have_x=yes\
 	ac_x_includes='$ac_x_includes'\
-	ac_x_libraries='$ac_x_libraries'"
-esac])dnl
-])
+	ac_x_libraries='$ac_x_libraries'"])])])
 
 
 # AC_PATH_X
@@ -332,7 +344,7 @@ X features:
 AC_MSG_CHECKING([for X])
 
 AC_ARG_WITH(x, [  --with-x                use the X Window System])
-# $have_x is `yes', `no', `disabled', or empty when we do not yet know.
+# $have_x is 'yes', 'no', 'disabled', or empty when we do not yet know.
 if test "x$with_x" = xno; then
   # The user explicitly disabled X.
   have_x=disabled

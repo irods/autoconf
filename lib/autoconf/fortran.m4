@@ -1,6 +1,7 @@
 # This file is part of Autoconf.                       -*- Autoconf -*-
 # Fortran languages support.
-# Copyright (C) 2001, 2003-2015 Free Software Foundation, Inc.
+# Copyright (C) 2001, 2003-2017, 2020-2022 Free Software Foundation,
+# Inc.
 
 # This file is part of Autoconf.  This program is free
 # software; you can redistribute it and/or modify it under the
@@ -20,7 +21,7 @@
 # You should have received a copy of the GNU General Public License
 # and a copy of the Autoconf Configure Script Exception along with
 # this program; see the files COPYINGv3 and COPYING.EXCEPTION
-# respectively.  If not, see <http://www.gnu.org/licenses/>.
+# respectively.  If not, see <https://www.gnu.org/licenses/>.
 
 # Written by David MacKenzie, with help from
 # Franc,ois Pinard, Karl Berry, Richard Pixley, Ian Lance Taylor,
@@ -308,7 +309,7 @@ AC_DEFUN([_AC_FC_DIALECT_YEAR],
 #  pgf77/pgf90/pghpf/pgf95/pgfortran: Portland Group F77/F90/F95 compilers
 #  xlf/xlf90/xlf95: IBM (AIX) F77/F90/F95 compilers
 #    Prefer xlf9x to the generic names because they do not reject files
-#    with extension `.f'.
+#    with extension '.f'.
 #  lf95: Lahey-Fujitsu F95 compiler
 #  fl32: Microsoft Fortran 77 "PowerStation" compiler
 #  af77: Apogee F77 compiler for Intergraph hardware running CLIX
@@ -341,7 +342,7 @@ rm -f a.out
 
 m4_expand_once([_AC_COMPILER_EXEEXT])[]dnl
 m4_expand_once([_AC_COMPILER_OBJEXT])[]dnl
-# If we don't use `.F' as extension, the preprocessor is not run on the
+# If we don't use '.F' as extension, the preprocessor is not run on the
 # input file.  (Note that this only needs to work for GNU compilers.)
 ac_save_ext=$ac_ext
 ac_ext=F
@@ -427,8 +428,8 @@ fi[]dnl
 
 # _AC_PROG_FC_C_O
 # ---------------
-# Test if the Fortran compiler accepts the options `-c' and `-o'
-# simultaneously, and define `[F77/FC]_NO_MINUS_C_MINUS_O' if it does not.
+# Test if the Fortran compiler accepts the options '-c' and '-o'
+# simultaneously, and define '[F77/FC]_NO_MINUS_C_MINUS_O' if it does not.
 #
 # The usefulness of this macro is questionable, as I can't really see
 # why anyone would use it.  The only reason I include it is for
@@ -441,7 +442,7 @@ AC_CACHE_CHECK([whether $[]_AC_FC[] understands -c and -o together],
 	       [ac_cv_prog_[]_AC_LANG_ABBREV[]_c_o],
 [AC_LANG_CONFTEST([AC_LANG_PROGRAM([])])
 # We test twice because some compilers refuse to overwrite an existing
-# `.o' file with `-o', although they will create one.
+# '.o' file with '-o', although they will create one.
 ac_try='$[]_AC_FC[] $[]_AC_LANG_PREFIX[]FLAGS -c conftest.$ac_ext -o conftest2.$ac_objext >&AS_MESSAGE_LOG_FD'
 rm -f conftest2.*
 if _AC_DO_VAR(ac_try) &&
@@ -664,10 +665,13 @@ while test $[@%:@] != 1; do
 	-lang* | -lcrt*.o | -lc | -lgcc* | -lSystem | -libmil | -little \
 	  |-LANG:=* | -LIST:* | -LNO:* | -link)
 	  ;;
-	-lkernel32)
+	-lkernel32 | -lmingw* | -lmoldname)
+	  # Ignore this library only on Windows-like systems.
 	  case $host_os in
-	  *cygwin*) ;;
-	  *) ac_cv_[]_AC_LANG_ABBREV[]_libs="$ac_cv_[]_AC_LANG_ABBREV[]_libs $ac_arg"
+	  cygwin* | msys* | mingw*) ;;
+	  *)
+	  _AC_LIST_MEMBER_IF($ac_arg, $ac_cv_[]_AC_LANG_ABBREV[]_libs, ,
+			     ac_cv_[]_AC_LANG_ABBREV[]_libs="$ac_cv_[]_AC_LANG_ABBREV[]_libs $ac_arg")
 	    ;;
 	  esac
 	  ;;
@@ -698,6 +702,7 @@ while test $[@%:@] != 1; do
 	-zallextract*| -zdefaultextract)
 	  ac_cv_[]_AC_LANG_ABBREV[]_libs="$ac_cv_[]_AC_LANG_ABBREV[]_libs $ac_arg"
 	  ;;
+	-mllvm) ${2+shift};; # Defend against 'clang -mllvm -loopopt=0'.
 	  # Ignore everything else.
   esac
 done
@@ -816,11 +821,11 @@ AS_IF([test "$[]_AC_FC[]_DUMMY_MAIN" != unknown],
       [m4_default([$1],
 [if test $[]_AC_FC[]_DUMMY_MAIN != none; then
   AC_DEFINE_UNQUOTED([]_AC_FC[]_DUMMY_MAIN, $[]_AC_FC[]_DUMMY_MAIN,
-		     [Define to dummy `main' function (if any) required to
+		     [Define to dummy 'main' function (if any) required to
 		      link to the Fortran libraries.])
   if test "x$ac_cv_fc_dummy_main" = "x$ac_cv_f77_dummy_main"; then
 	AC_DEFINE([FC_DUMMY_MAIN_EQ_F77], 1,
-		  [Define if F77 and FC dummy `main' functions are identical.])
+		  [Define if F77 and FC dummy 'main' functions are identical.])
   fi
 fi])],
       [m4_default([$2],
@@ -881,8 +886,8 @@ AC_CACHE_CHECK([for alternate main to link with _AC_LANG libraries],
  LIBS=$ac_[]_AC_LANG_ABBREV[]_m_save_LIBS
 ])
 AC_DEFINE_UNQUOTED([]_AC_FC[]_MAIN, $ac_cv_[]_AC_LANG_ABBREV[]_main,
-		   [Define to alternate name for `main' routine that is
-		    called from a `main' in the Fortran libraries.])
+		   [Define to alternate name for 'main' routine that is
+		    called from a 'main' in the Fortran libraries.])
 ])# _AC_FC_MAIN
 
 
@@ -1200,7 +1205,7 @@ AC_LANG_POP(Fortran)dnl
 #
 # Some compilers allow preprocessing with either a Fortran preprocessor or
 # with the C preprocessor (cpp).  Prefer the Fortran preprocessor, to deal
-# correctly with continuation lines, `//' (not a comment), and preserve white
+# correctly with continuation lines, '//' (not a comment), and preserve white
 # space (for fixed form).
 #
 # (The flags for the current source-code extension, if any, are stored in
@@ -1454,8 +1459,8 @@ AC_LANG_POP([Fortran])dnl
 # ------------------------------------------------
 # Look for a compiler flag to make the Fortran (FC) compiler accept long lines
 # in the current (free- or fixed-format) source code, and adds it to FCFLAGS.
-# The optional LENGTH may be 80, 132 (default), or `unlimited' for longer
-# lines.  Note that line lengths above 254 columns are not portable, and some
+# The optional LENGTH may be 80, 132 (default), or 'unlimited' for longer
+# lines.  Note that line lengths above 250 columns are not portable, and some
 # compilers (hello ifort) do not accept more than 132 columns at least for
 # fixed format.  Call ACTION-IF-SUCCESS (defaults to nothing) if successful
 # (i.e. can compile code using new extension) and ACTION-IF-FAILURE (defaults
@@ -1498,7 +1503,7 @@ m4_case(m4_default([$1], [132]),
   [80],             [ac_fc_line_len=80
 		       ac_fc_line_length_test='
       subroutine longer_than_72(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9)'],
-  [m4_warning([Invalid length argument `$1'])])
+  [m4_warning([Invalid length argument '$1'])])
 : ${ac_fc_line_len_string=$ac_fc_line_len}
 AC_CACHE_CHECK(
 [for Fortran flag needed to accept $ac_fc_line_len_string column source lines],
@@ -1855,4 +1860,74 @@ AC_SUBST([ac_empty], [""])
 AC_CONFIG_COMMANDS_PRE([case $FC_MODOUT in #(
   *\ ) FC_MODOUT=$FC_MODOUT'${ac_empty}' ;;
 esac])dnl
+])
+
+
+# _AC_FC_CRAY_POINTERS([ACTION-IF-SUCCESS], [ACTION-IF-FAILURE = FAILURE])
+#-------------------------------------------------------------------------
+# Try to ensure that the Fortran compiler supports Cray pointers, a
+# non-standard extension that provides a C-like pointer in Fortran.
+#
+# If successful, ACTION-IF-SUCCESS is called.  If no argument is provided, then
+# any necessary flags are added to F[C]FLAGS.  Otherwise, ACTION-IF-FAILURE is
+# called, which defaults to failing with an error message.
+#
+# Most compilers provide an implementation of Cray pointers, and often no
+# additional flags are required to enable support.  A partial list of compilers
+# and flags which may be required are listed below.
+#
+# The known flags are:
+#   -fcray-pointer: gfortran
+#   -Mcray-pointer: PGI
+AC_DEFUN([_AC_FC_CRAY_POINTERS], [
+  AC_MSG_CHECKING([for $[]_AC_FC[] option to support Cray pointers])
+  AC_CACHE_VAL([ac_cv_[]_AC_LANG_ABBREV[]_cray_ptr], [
+    ac_cv_[]_AC_LANG_ABBREV[]_cray_ptr='unknown'
+    ac_save_[]_AC_LANG_PREFIX[]FLAGS=$[]_AC_LANG_PREFIX[]FLAGS
+    for ac_option in none -fcray-pointer -Mcray=pointer; do
+      test "$ac_option" != none && _AC_LANG_PREFIX[]FLAGS="$ac_save_[]_AC_LANG_PREFIX[]FLAGS $ac_option"
+      AC_COMPILE_IFELSE(
+        [AC_LANG_PROGRAM([], [
+      integer aptr(2)
+      pointer (iptr, aptr)
+        ])],
+        [ac_cv_[]_AC_LANG_ABBREV[]_cray_ptr=$ac_option],
+      )
+      _AC_LANG_PREFIX[]FLAGS=$ac_save_[]_AC_LANG_PREFIX[]FLAGS
+      AS_IF([test "$ac_cv_[]_AC_LANG_ABBREV[]_cray_ptr" != unknown], [break])
+    done
+  ])
+  AS_CASE([ac_cv_[]_AC_LANG_ABBREV[]_cray_ptr],
+    [none], [AC_MSG_RESULT([none_needed])],
+    [unknown], [AC_MSG_RESULT([unsupported])],
+    [AC_MSG_RESULT([$ac_cv_[]_AC_LANG_ABBREV[]_cray_ptr])]
+  )
+  AS_IF([test "$ac_cv_[]_AC_LANG_ABBREV[]_cray_ptr" != unknown], [
+    m4_default([$1], [
+      AS_IF([test "$ac_cv_[]_AC_LANG_ABBREV[]_cray_ptr" != none],
+        [_AC_LANG_PREFIX[]FLAGS="$[]_AC_LANG_PREFIX[]FLAGS $ac_cv_[]_AC_LANG_ABBREV[]_cray_ptr"]
+      )
+    ])],
+    [m4_default([$2], [AC_MSG_ERROR(["$[]_AC_FC[] does not support Cray pointers"])])]
+  )
+])
+
+
+# AC_F77_CRAY_POINTERS
+#---------------------
+AC_DEFUN([AC_F77_CRAY_POINTERS], [
+  AC_REQUIRE([AC_PROG_F77])
+  AC_LANG_PUSH([Fortran 77])
+  _AC_FC_CRAY_POINTERS($@)
+  AC_LANG_POP([Fortran 77])
+])
+
+
+# AC_FC_CRAY_POINTERS
+#--------------------
+AC_DEFUN([AC_FC_CRAY_POINTERS], [
+  AC_REQUIRE([AC_PROG_FC])
+  AC_LANG_PUSH([Fortran])
+  _AC_FC_CRAY_POINTERS($@)
+  AC_LANG_POP([Fortran])
 ])

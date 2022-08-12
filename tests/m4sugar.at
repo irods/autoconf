@@ -2,7 +2,8 @@
 
 AT_BANNER([M4sugar.])
 
-# Copyright (C) 2000-2002, 2005-2015 Free Software Foundation, Inc.
+# Copyright (C) 2000-2002, 2005-2017, 2020-2022 Free Software
+# Foundation, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +16,7 @@ AT_BANNER([M4sugar.])
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 # AT_CHECK_M4SUGAR_TEXT(CODE, STDOUT, STDERR)
@@ -195,7 +196,7 @@ m4_dumpdef([good], [oops])
 ]])
 
 AT_CHECK_M4SUGAR([-o-], 1, [], [stderr])
-AT_CHECK([grep '^good:	\[[yep\]]$' stderr], [0], [ignore])
+AT_CHECK([grep '^good:	\[[yep]]$' stderr], [0], [ignore])
 AT_CHECK([grep 'm4@&t@_dumpdef: undefined.*oops' stderr], [0], [ignore])
 
 # Check that pushdef stacks can be dumped.
@@ -258,6 +259,7 @@ m4_warn([syntax], [syntax])dnl
 
 AT_CHECK_M4SUGAR([-o-], 0, [],
 [script.4s:4: warning: prefer named diversions
+script.4s:5: warning: obsolete
 script.4s:7: warning: syntax
 script.4s:9: warning: syntax
 ])
@@ -353,7 +355,7 @@ AT_DATA_M4SUGAR([script.4s],
 AT_CHECK_M4SUGAR([-o-], [1], [],
 [[script.4s:1: error: too many m4@&t@_divert_pop
 script.4s:1: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 AT_DATA_M4SUGAR([script.4s],
@@ -366,7 +368,7 @@ AT_CHECK_M4SUGAR([-o-], [1], [],
 script.4s:2: m4@&t@_divert_push: 1
 script.4s:1: m4@&t@_divert: KILL
 script.4s:3: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 AT_DATA_M4SUGAR([script.4s],
@@ -379,7 +381,7 @@ AT_CHECK_M4SUGAR([-o-], [1], [],
 script.4s:3: m4@&t@_divert_push: 2
 script.4s:2: m4@&t@_divert: KILL
 script.4s:2: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 AT_CLEANUP
@@ -424,7 +426,7 @@ m4_require([foo])
 AT_CHECK_M4SUGAR([], 1, [],
 [[script.4s:2: error: m4@&t@_require(foo): cannot be used outside of an m4_defun'd macro
 script.4s:2: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 AT_CLEANUP
 
@@ -505,7 +507,7 @@ script.4s:3: bar is expanded from...
 script.4s:1: foo is expanded from...
 script.4s:5: baz is expanded from...
 script.4s:9: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 AT_CLEANUP
 
@@ -668,8 +670,8 @@ a
 c
 post
 ]],
-[[script.4s:15: warning: m4@&t@_require: `a' was expanded before it was required
-script.4s:15: http://www.gnu.org/software/autoconf/manual/autoconf.html#Expanded-Before-Required
+[[script.4s:15: warning: m4@&t@_require: 'a' was expanded before it was required
+script.4s:15: https://www.gnu.org/software/autoconf/manual/autoconf.html#Expanded-Before-Required
 script.4s:5: b is expanded from...
 script.4s:6: c is expanded from...
 script.4s:14: outer is expanded from...
@@ -922,7 +924,7 @@ m4_argn([0], [a], [b], [c])
 AT_CHECK_M4SUGAR([-o-], [1], [],
 [[script.4s:2: error: assert failed: 0 < 0
 script.4s:2: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 AT_CLEANUP
@@ -1080,7 +1082,7 @@ str
 ]])
 
 AT_CHECK_M4SUGAR([-o-], 0, [[a a b
-]], [[script.4s:3: warning: m4@&t@_append_uniq: `a b' contains ` '
+]], [[script.4s:3: warning: m4@&t@_append_uniq: 'a b' contains ' '
 ]])
 
 AT_CLEANUP
@@ -1155,7 +1157,7 @@ esac
 case b in
   *[)] echo active, ;;
 esac])
-dnl unbalanced underquoted `)', but we manage anyway (gasp!)
+dnl unbalanced underquoted ')', but we manage anyway (gasp!)
 m4_expand([case c in #(
   *) echo active, ;;
 esac
@@ -1343,10 +1345,10 @@ AT_CLEANUP
 
 AT_SETUP([Standard regular expressions])
 
-# AT_CHECK_M4RE(RE-NAME, TEXT, INTENT = `ok' | `')
+# AT_CHECK_M4RE(RE-NAME, TEXT, INTENT = 'ok' | '')
 # ------------------------------------------------
 # Check whether RE-NAME (a macro whose definition is a regular expression)
-# matches TEXT.  INTENT = `ok' if the match should succeed or else empty.
+# matches TEXT.  INTENT = 'ok' if the match should succeed or else empty.
 m4_define([AT_CHECK_M4RE],
 [AT_CHECK_M4SUGAR_TEXT(
 [[m4_bregexp([$2], ^m4_defn([$1])$, [ok])
@@ -1604,7 +1606,7 @@ m4_for([myvar], 1, 3,-1, [ myvar])
 AT_CHECK_M4SUGAR([], 1, [],
 [[script.4s:3: error: assert failed: -1 > 0
 script.4s:3: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 AT_DATA_M4SUGAR([script.4s],
@@ -1615,7 +1617,7 @@ m4_for([myvar], 1, 2, 0, [ myvar])
 AT_CHECK_M4SUGAR([], 1, [],
 [[script.4s:3: error: assert failed: 0 > 0
 script.4s:3: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 AT_DATA_M4SUGAR([script.4s],
@@ -1626,7 +1628,7 @@ m4_for([myvar], 2, 1, 0, [ myvar])
 AT_CHECK_M4SUGAR([], 1, [],
 [[script.4s:3: error: assert failed: 0 < 0
 script.4s:3: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 dnl m4_shiftn also does bounds checking
@@ -1638,7 +1640,7 @@ m4_shiftn(3,1,2)
 AT_CHECK_M4SUGAR([], 1, [],
 [[script.4s:3: error: assert failed: 0 < 3 && 3 < 3
 script.4s:3: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 AT_CLEANUP
@@ -1831,7 +1833,7 @@ AT_DATA_M4SUGAR([script.4s],
 AT_CHECK_M4SUGAR([], 1, [],
 [[script.4s:1: error: too few arguments to m4@&t@_max
 script.4s:1: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 AT_DATA_M4SUGAR([script.4s],
@@ -1841,7 +1843,7 @@ AT_DATA_M4SUGAR([script.4s],
 AT_CHECK_M4SUGAR([], 1, [],
 [[script.4s:1: error: too few arguments to m4@&t@_min
 script.4s:1: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 
 AT_CHECK_M4SUGAR_TEXT([[dnl

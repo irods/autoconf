@@ -2,7 +2,7 @@
 # This Makefile fragment tries to be general-purpose enough to be
 # used by many projects via the gnulib maintainer-makefile module.
 
-## Copyright (C) 2001-2015 Free Software Foundation, Inc.
+## Copyright (C) 2001-2022 Free Software Foundation, Inc.
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -15,18 +15,18 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # This is reported not to work with make-3.79.1
 # ME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 ME := maint.mk
 
-# Diagnostic for continued use of deprecated variable.
-# Remove in 2013
-ifneq ($(build_aux),)
- $(error "$(ME): \
-set $$(_build-aux) relative to $$(srcdir) instead of $$(build_aux)")
-endif
+# These variables ought to be defined through the configure.ac section
+# of the module description. But some packages import this file directly,
+# ignoring the module description.
+AWK ?= awk
+GREP ?= grep
+SED ?= sed
 
 # Helper variables.
 _empty =
@@ -53,7 +53,7 @@ member-check =								\
 # Do not save the original name or timestamp in the .tar.gz file.
 # Use --rsyncable if available.
 gzip_rsyncable := \
-  $(shell gzip --help 2>/dev/null|grep rsyncable >/dev/null \
+  $(shell gzip --help 2>/dev/null|$(GREP) rsyncable >/dev/null \
     && printf %s --rsyncable)
 GZIP_ENV = '--no-name --best $(gzip_rsyncable)'
 
@@ -61,6 +61,14 @@ GIT = git
 VC = $(GIT)
 
 VC_LIST = $(srcdir)/$(_build-aux)/vc-list-files -C $(srcdir)
+
+# You can override this variable in cfg.mk if your gnulib submodule lives
+# in a different location.
+gnulib_dir ?= $(shell if test -f $(srcdir)/gnulib/gnulib-tool; then \
+			echo $(srcdir)/gnulib; \
+		else \
+			echo ${GNULIB_SRCDIR}; \
+		fi)
 
 # You can override this variable in cfg.mk to set your own regexp
 # matching files to ignore.
@@ -76,7 +84,7 @@ _dot_escaped_srcdir = $(subst .,\.,$(srcdir))
 ifeq ($(srcdir),.)
   _prepend_srcdir_prefix =
 else
-  _prepend_srcdir_prefix = | sed 's|^|$(srcdir)/|'
+  _prepend_srcdir_prefix = | $(SED) 's|^|$(srcdir)/|'
 endif
 
 # In order to be able to consistently filter "."-relative names,
@@ -85,10 +93,10 @@ endif
 _sc_excl = \
   $(or $(exclude_file_name_regexp--$@),^$$)
 VC_LIST_EXCEPT = \
-  $(VC_LIST) | sed 's|^$(_dot_escaped_srcdir)/||' \
-	| if test -f $(srcdir)/.x-$@; then grep -vEf $(srcdir)/.x-$@; \
-	  else grep -Ev -e "$${VC_LIST_EXCEPT_DEFAULT-ChangeLog}"; fi \
-	| grep -Ev -e '($(VC_LIST_ALWAYS_EXCLUDE_REGEX)|$(_sc_excl))' \
+  $(VC_LIST) | $(SED) 's|^$(_dot_escaped_srcdir)/||' \
+	| if test -f $(srcdir)/.x-$@; then $(GREP) -vEf $(srcdir)/.x-$@; \
+	  else $(GREP) -Ev -e "$${VC_LIST_EXCEPT_DEFAULT-ChangeLog}"; fi \
+	| $(GREP) -Ev -e '($(VC_LIST_ALWAYS_EXCLUDE_REGEX)|$(_sc_excl))' \
 	$(_prepend_srcdir_prefix)
 
 ifeq ($(origin prev_version_file), undefined)
@@ -133,8 +141,8 @@ gnu_ftp_host-stable = ftp.gnu.org
 gnu_rel_host ?= $(gnu_ftp_host-$(release-type))
 
 url_dir_list ?= $(if $(call _equal,$(gnu_rel_host),ftp.gnu.org),	\
-                     http://ftpmirror.gnu.org/$(PACKAGE),		\
-                     ftp://$(gnu_rel_host)/gnu/$(PACKAGE))
+                     https://ftpmirror.gnu.org/$(PACKAGE),		\
+                     https://$(gnu_rel_host)/gnu/$(PACKAGE))
 
 # Override this in cfg.mk if you are using a different format in your
 # NEWS file.
@@ -155,11 +163,12 @@ export LC_ALL = C
 ## Sanity checks.  ##
 ## --------------- ##
 
+ifneq ($(_gl-Makefile),)
 _cfg_mk := $(wildcard $(srcdir)/cfg.mk)
 
 # Collect the names of rules starting with 'sc_'.
-syntax-check-rules := $(sort $(shell sed -n 's/^\(sc_[a-zA-Z0-9_-]*\):.*/\1/p' \
-			$(srcdir)/$(ME) $(_cfg_mk)))
+syntax-check-rules := $(sort $(shell env LC_ALL=C $(SED) -n \
+   's/^\(sc_[a-zA-Z0-9_-]*\):.*/\1/p' $(srcdir)/$(ME) $(_cfg_mk)))
 .PHONY: $(syntax-check-rules)
 
 ifeq ($(shell $(VC_LIST) >/dev/null 2>&1; echo $$?),0)
@@ -186,7 +195,7 @@ $(sc_z_rules_): %.z: %
 	@end=$$(date +%s.%N);						\
 	start=$$(cat .sc-start-$*);					\
 	rm -f .sc-start-$*;						\
-	awk -v s=$$start -v e=$$end					\
+	$(AWK) -v s=$$start -v e=$$end					\
 	  'END {printf "%.2f $(patsubst sc_%,%,$*)\n", e - s}' < /dev/null
 
 # The patsubst here is to replace each sc_% rule with its sc_%.z wrapper
@@ -196,6 +205,7 @@ local-check :=								\
     $(filter-out $(local-checks-to-skip), $(local-checks-available)))
 
 syntax-check: $(local-check)
+endif
 
 # _sc_search_regexp
 #
@@ -293,42 +303,56 @@ define _sc_search_regexp
 									\
    : Filter by file name;						\
    if test -n "$$in_files"; then					\
-     files=$$(find $(srcdir) | grep -E "$$in_files"			\
-              | grep -Ev '$(_sc_excl)');				\
+     files=$$(find $(srcdir) | $(GREP) -E "$$in_files"			\
+              | $(GREP) -Ev '$(_sc_excl)');				\
    else									\
      files=$$($(VC_LIST_EXCEPT));					\
      if test -n "$$in_vc_files"; then					\
-       files=$$(echo "$$files" | grep -E "$$in_vc_files");		\
+       files=$$(echo "$$files" | $(GREP) -E "$$in_vc_files");		\
      fi;								\
    fi;									\
 									\
    : Filter by content;							\
-   test -n "$$files" && test -n "$$containing"				\
-     && { files=$$(grep -l "$$containing" $$files); } || :;		\
-   test -n "$$files" && test -n "$$non_containing"			\
-     && { files=$$(grep -vl "$$non_containing" $$files); } || :;	\
+   test -n "$$files"							\
+     && test -n "$$containing"						\
+     && { files=$$(echo "$$files" | xargs $(GREP) -l "$$containing"); }	\
+     || :;								\
+   test -n "$$files"							\
+     && test -n "$$non_containing"					\
+     && { files=$$(echo "$$files" | xargs $(GREP) -vl "$$non_containing"); } \
+     || :;								\
 									\
    : Check for the construct;						\
    if test -n "$$files"; then						\
      if test -n "$$prohibit"; then					\
-       grep $$with_grep_options $(_ignore_case) -nE "$$prohibit" $$files \
-         | grep -vE "$${exclude:-^$$}"					\
-         && { msg="$$halt" $(_sc_say_and_exit) } || :;			\
+       echo "$$files"							\
+         | xargs $(GREP) $$with_grep_options $(_ignore_case) -nE	\
+		"$$prohibit" /dev/null					\
+         | $(GREP) -vE "$${exclude:-^$$}"				\
+         && { msg="$$halt" $(_sc_say_and_exit) }			\
+         || :;								\
      else								\
-       grep $$with_grep_options $(_ignore_case) -LE "$$require" $$files \
-           | grep .							\
-         && { msg="$$halt" $(_sc_say_and_exit) } || :;			\
+       echo "$$files"							\
+         | xargs							\
+             $(GREP) $$with_grep_options $(_ignore_case) -LE "$$require" \
+         | $(GREP) .							\
+         && { msg="$$halt" $(_sc_say_and_exit) }			\
+         || :;								\
      fi									\
    else :;								\
    fi || :;
 endef
 
 sc_avoid_if_before_free:
-	@$(srcdir)/$(_build-aux)/useless-if-before-free			\
-		$(useless_free_options)					\
-	    $$($(VC_LIST_EXCEPT) | grep -v useless-if-before-free) &&	\
-	  { echo '$(ME): found useless "if" before "free" above' 1>&2;	\
-	    exit 1; } || :
+	@$(VC_LIST_EXCEPT)						\
+	  | $(GREP) -v useless-if-before-free				\
+	  | xargs							\
+	      $(srcdir)/$(_build-aux)/useless-if-before-free		\
+	      $(useless_free_options)					\
+	  && { printf '$(ME): found useless "if"'			\
+		      ' before "free" above\n' 1>&2;			\
+	       exit 1; }						\
+	  || :
 
 sc_cast_of_argument_to_free:
 	@prohibit='\<free *\( *\(' halt="don't cast free argument"	\
@@ -389,6 +413,43 @@ sc_prohibit_magic_number_exit:
 	halt='use EXIT_* values rather than magic number'		\
 	  $(_sc_search_regexp)
 
+# Check that we don't use $< in non-implicit Makefile rules.
+#
+# To find the Makefiles, trace AC_CONFIG_FILES.  Using VC_LIST would
+# miss the Makefiles that are not under VC control (e.g., symlinks
+# installed for gettext).  "Parsing" (recursive) uses of SUBDIRS seems
+# too delicate.
+#
+# Use GNU Make's --print-data-base to normalize the rules into some
+# easy to parse format: they are separated by two \n.  Look for the
+# "section" about non-pattern rules (marked with "# Files") inside
+# which there are still the POSIX Make like implicit rules (".c.o").
+sc_prohibit_gnu_make_extensions_awk_ =					\
+  BEGIN {								\
+      RS = "\n\n";							\
+      in_rules = 0;							\
+  }									\
+  /^\# Files/ {								\
+      in_rules = 1;							\
+  }									\
+  /\$$</ && in_rules && $$0 !~ /^(.*\n)*\.\w+(\.\w+)?:/ {		\
+      print "Error: " file ": $$< in a non implicit rule\n" $$0;	\
+      status = 1;							\
+  }									\
+  END {									\
+     exit status;							\
+  }
+sc_prohibit_gnu_make_extensions:
+	@if $(AWK) --version | grep GNU >/dev/null 2>&1; then		\
+	  (cd $(srcdir) && autoconf --trace AC_CONFIG_FILES:'$$1') |	\
+	    tr ' ' '\n' |						\
+	    $(SED) -ne '/Makefile/{s/\.in$$//;p;}' |			\
+	    while read m; do						\
+	      $(MAKE) -qp -f $$m .DUMMY-TARGET 2>/dev/null |		\
+		$(AWK) -v file=$$m -e '$($@_awk_)' || exit 1;		\
+	    done;							\
+	fi
+
 # Using EXIT_SUCCESS as the first argument to error is misleading,
 # since when that parameter is 0, error does not exit.  Use '0' instead.
 sc_error_exit_success:
@@ -400,28 +461,38 @@ sc_error_exit_success:
 # "FATAL:" should be fully upper-cased in error messages
 # "WARNING:" should be fully upper-cased, or fully lower-cased
 sc_error_message_warn_fatal:
-	@grep -nEA2 '[^rp]error *\(' $$($(VC_LIST_EXCEPT))		\
-	    | grep -E '"Warning|"Fatal|"fatal' &&			\
-	  { echo '$(ME): use FATAL, WARNING or warning'	1>&2;		\
-	    exit 1; } || :
+	@$(VC_LIST_EXCEPT)						\
+	  | xargs $(GREP) -nEA2 '[^rp]error *\(' /dev/null		\
+	  | $(GREP) -E '"Warning|"Fatal|"fatal'				\
+	  && { echo '$(ME): use FATAL, WARNING or warning' 1>&2;	\
+	       exit 1; }						\
+	  || :
 
-# Error messages should not start with a capital letter
+# Error messages should not start with a capital letter;
+# however, if they start with an entire fully uppercased word, that's
+# probably a proper noun and it should stay that way.  We also exempt
+# known instances of proper nouns that should stay mixed-case.
 sc_error_message_uppercase:
-	@grep -nEA2 '[^rp]error *\(' $$($(VC_LIST_EXCEPT))		\
-	    | grep -E '"[A-Z]'						\
-	    | grep -vE '"FATAL|"WARNING|"Java|"C#|PRIuMAX' &&		\
-	  { echo '$(ME): found capitalized error message' 1>&2;		\
-	    exit 1; } || :
+	@$(VC_LIST_EXCEPT)						\
+	  | xargs $(GREP) -nEA2 '[^rp]error *\(' /dev/null		\
+	  | $(GREP) -E '"[A-Z]'						\
+	  | $(GREP) -vE '"([A-Z0-9_]{2,}\>|Java|C#|(PRI|SCN)[dioux])'	\
+	  && { echo '$(ME): found capitalized error message' 1>&2;	\
+	       exit 1; }						\
+	  || :
 
 # Error messages should not end with a period
 sc_error_message_period:
-	@grep -nEA2 '[^rp]error *\(' $$($(VC_LIST_EXCEPT))		\
-	    | grep -E '[^."]\."' &&					\
-	  { echo '$(ME): found error message ending in period' 1>&2;	\
-	    exit 1; } || :
+	@$(VC_LIST_EXCEPT)						\
+	  | xargs $(GREP) -nEA2 '[^rp]error *\(' /dev/null		\
+	  | $(GREP) -E '[^."]\."'					\
+	  && { echo '$(ME): found error message ending in period' 1>&2;	\
+	       exit 1; }						\
+	  || :
 
 sc_file_system:
 	@prohibit=file''system						\
+	exclude='/proc/filesystems'					\
 	ignore_case=1							\
 	halt='found use of "file''system"; spell it "file system"'	\
 	  $(_sc_search_regexp)
@@ -442,17 +513,26 @@ sc_require_config_h:
 	halt='the above files do not include <config.h>'		\
 	  $(_sc_search_regexp)
 
+# Print each file name for which the first #include does not match
+# $(config_h_header).  Like grep -m 1, this only looks at the first match.
+perl_config_h_first_ =							\
+  -e 'BEGIN {$$ret = 0}'						\
+  -e 'if (/^\# *include\b/) {'						\
+  -e '  if (not m{^\# *include $(config_h_header)}) {'			\
+  -e '    print "$$ARGV\n";'						\
+  -e '    $$ret = 1;'							\
+  -e '  }'								\
+  -e '  \# Move on to next file after first include'			\
+  -e '  close ARGV;'							\
+  -e '}'								\
+  -e 'END {exit $$ret}'
+
 # You must include <config.h> before including any other header file.
 # This can possibly be via a package-specific header, if given by cfg.mk.
 sc_require_config_h_first:
-	@if $(VC_LIST_EXCEPT) | grep -l '\.c$$' > /dev/null; then	\
-	  fail=0;							\
-	  for i in $$($(VC_LIST_EXCEPT) | grep '\.c$$'); do		\
-	    grep '^# *include\>' $$i | sed 1q				\
-		| grep -E '^# *include $(config_h_header)' > /dev/null	\
-	      || { echo $$i; fail=1; };					\
-	  done;								\
-	  test $$fail = 1 &&						\
+	@if $(VC_LIST_EXCEPT) | $(GREP) '\.c$$' > /dev/null; then	\
+	  files=$$($(VC_LIST_EXCEPT) | $(GREP) '\.c$$') &&		\
+	  perl -n $(perl_config_h_first_) $$files ||			\
 	    { echo '$(ME): the above files include some other header'	\
 		'before <config.h>' 1>&2; exit 1; } || :;		\
 	else :;								\
@@ -468,11 +548,11 @@ sc_prohibit_HAVE_MBRTOWC:
 # re: a regular expression that matches IFF something provided by $h is used.
 define _sc_header_without_use
   dummy=; : so we do not need a semicolon before each use;		\
-  h_esc=`echo '[<"]'"$$h"'[">]'|sed 's/\./\\\\./g'`;			\
-  if $(VC_LIST_EXCEPT) | grep -l '\.c$$' > /dev/null; then		\
-    files=$$(grep -l '^# *include '"$$h_esc"				\
-	     $$($(VC_LIST_EXCEPT) | grep '\.c$$')) &&			\
-    grep -LE "$$re" $$files | grep . &&					\
+  h_esc=`echo '[<"]'"$$h"'[">]'|$(SED) 's/\./\\\\./g'`;			\
+  if $(VC_LIST_EXCEPT) | $(GREP) '\.c$$' > /dev/null; then		\
+    files=$$($(GREP) -l '^# *include '"$$h_esc"				\
+	     $$($(VC_LIST_EXCEPT) | $(GREP) '\.c$$')) &&		\
+    $(GREP) -LE "$$re" $$files | $(GREP) . &&				\
       { echo "$(ME): the above files include $$h but don't use it"	\
 	1>&2; exit 1; } || :;						\
   else :;								\
@@ -502,7 +582,7 @@ sc_prohibit_quote_without_use:
 
 # Don't include this header unless you use one of its functions.
 sc_prohibit_long_options_without_use:
-	@h='long-options.h' re='\<parse_long_options *\(' \
+	@h='long-options.h' re='\<parse_(long_options|gnu_standard_options_only) *\(' \
 	  $(_sc_header_without_use)
 
 # Don't include this header unless you use one of its functions.
@@ -545,9 +625,9 @@ sc_prohibit_xalloc_without_use:
 	  $(_sc_header_without_use)
 
 # Extract function names:
-# perl -lne '/^(?:extern )?(?:void|char) \*?(\w+) *\(/ and print $1' lib/hash.h
+# perl -lne '/^(?:extern )?(?:void|char|Hash_table) \*?(\w+) *\(/ and print $1' lib/hash.h
 _hash_re = \
-clear|delete|free|get_(first|next)|insert|lookup|print_statistics|reset_tuning
+hash_(re(set_tuning|move)|xin(itialize|sert)|in(itialize|sert)|get_(firs|nex)t|print_statistics|(delet|fre)e|lookup|clear)
 _hash_fn = \<($(_hash_re)) *\(
 _hash_struct = (struct )?\<[Hh]ash_(table|tuning)\>
 sc_prohibit_hash_without_use:
@@ -563,7 +643,7 @@ sc_prohibit_posixver_without_use:
 	@h='posixver.h' re='\<posix2_version *\(' $(_sc_header_without_use)
 
 sc_prohibit_same_without_use:
-	@h='same.h' re='\<same_name *\(' $(_sc_header_without_use)
+	@h='same.h' re='\<same_name(at)? *\(' $(_sc_header_without_use)
 
 sc_prohibit_hash_pjw_without_use:
 	@h='hash-pjw.h' \
@@ -576,7 +656,7 @@ sc_prohibit_safe_read_without_use:
 
 sc_prohibit_argmatch_without_use:
 	@h='argmatch.h' \
-	re='(\<(ARRAY_CARDINALITY|X?ARGMATCH(|_TO_ARGUMENT|_VERIFY))\>|\<(invalid_arg|argmatch(_exit_fn|_(in)?valid)?) *\()' \
+	re='(\<(ARGMATCH_DEFINE_GROUP|ARRAY_CARDINALITY|X?ARGMATCH(|_TO_ARGUMENT|_VERIFY))\>|\<(invalid_arg|argmatch(_exit_fn|_(in)?valid)?) *\()' \
 	  $(_sc_header_without_use)
 
 sc_prohibit_canonicalize_without_use:
@@ -591,7 +671,7 @@ sc_prohibit_root_dev_ino_without_use:
 
 sc_prohibit_openat_without_use:
 	@h='openat.h' \
-	re='\<(openat_(permissive|needs_fchdir|(save|restore)_fail)|l?(stat|ch(own|mod))at|(euid)?accessat)\>' \
+	re='\<(openat_(permissive|needs_fchdir|(save|restore)_fail)|l?(stat|ch(own|mod))at|(euid)?accessat|(FCHMOD|FCHOWN|STAT)AT_INLINE)\>' \
 	  $(_sc_header_without_use)
 
 # Prohibit the inclusion of c-ctype.h without an actual use.
@@ -653,18 +733,14 @@ sc_prohibit_strings_without_use:
 	re='\<(strn?casecmp|ffs(ll)?)\>'				\
 	  $(_sc_header_without_use)
 
-# Get the list of symbol names with this:
-# perl -lne '/^# *define ([A-Z]\w+)\(/ and print $1' lib/intprops.h|fmt
-_intprops_names =							\
-  TYPE_IS_INTEGER TYPE_TWOS_COMPLEMENT TYPE_ONES_COMPLEMENT		\
-  TYPE_SIGNED_MAGNITUDE TYPE_SIGNED TYPE_MINIMUM TYPE_MAXIMUM		\
-  INT_BITS_STRLEN_BOUND INT_STRLEN_BOUND INT_BUFSIZE_BOUND		\
-  INT_ADD_RANGE_OVERFLOW INT_SUBTRACT_RANGE_OVERFLOW			\
-  INT_NEGATE_RANGE_OVERFLOW INT_MULTIPLY_RANGE_OVERFLOW			\
-  INT_DIVIDE_RANGE_OVERFLOW INT_REMAINDER_RANGE_OVERFLOW		\
-  INT_LEFT_SHIFT_RANGE_OVERFLOW INT_ADD_OVERFLOW INT_SUBTRACT_OVERFLOW	\
-  INT_NEGATE_OVERFLOW INT_MULTIPLY_OVERFLOW INT_DIVIDE_OVERFLOW		\
-  INT_REMAINDER_OVERFLOW INT_LEFT_SHIFT_OVERFLOW
+# Extract the raw list of symbol names with this:
+gl_extract_define_simple = \
+  /^\# *define ([A-Z]\w+)\(/ and print $$1
+# Filter out duplicates and convert to a space-separated list:
+_intprops_names = \
+  $(shell f=$(gnulib_dir)/lib/intprops.h;				\
+    perl -lne '$(gl_extract_define_simple)' $$f | sort -u | tr '\n' ' ')
+# Remove trailing space and convert to a regular expression:
 _intprops_syms_re = $(subst $(_sp),|,$(strip $(_intprops_names)))
 # Prohibit the inclusion of intprops.h without an actual use.
 sc_prohibit_intprops_without_use:
@@ -692,7 +768,7 @@ sc_prohibit_dirent_without_use:
 # Prohibit the inclusion of verify.h without an actual use.
 sc_prohibit_verify_without_use:
 	@h='verify.h'							\
-	re='\<(verify(true|expr)?|static_assert) *\('			\
+	re='\<(verify(true|expr)?|assume|static_assert) *\('		\
 	  $(_sc_header_without_use)
 
 # Don't include xfreopen.h unless you use one of its functions.
@@ -714,15 +790,6 @@ sc_changelog:
 	  $(_sc_search_regexp)
 
 # Ensure that each .c file containing a "main" function also
-# calls set_program_name.
-sc_program_name:
-	@require='set_program_name *\(m?argv\[0\]\);'			\
-	in_vc_files='\.c$$'						\
-	containing='\<main *('						\
-	halt='the above files do not call set_program_name'		\
-	  $(_sc_search_regexp)
-
-# Ensure that each .c file containing a "main" function also
 # calls bindtextdomain.
 sc_bindtextdomain:
 	@require='bindtextdomain *\('					\
@@ -739,9 +806,9 @@ Exit_base := $(notdir $(Exit_witness_file))
 sc_require_test_exit_idiom:
 	@if test -f $(srcdir)/$(Exit_witness_file); then		\
 	  die=0;							\
-	  for i in $$(grep -l -F 'srcdir/$(Exit_base)'			\
+	  for i in $$($(GREP) -l -F 'srcdir/$(Exit_base)'		\
 		$$($(VC_LIST) tests)); do				\
-	    tail -n1 $$i | grep '^Exit .' > /dev/null			\
+	    tail -n1 $$i | $(GREP) '^Exit .' > /dev/null		\
 	      && : || { die=1; echo $$i; }				\
 	  done;								\
 	  test $$die = 1 &&						\
@@ -759,7 +826,7 @@ sc_trailing_blank:
 # Match lines like the following, but where there is only one space
 # between the options and the description:
 #   -D, --all-repeated[=delimit-method]  print all duplicate lines\n
-longopt_re = --[a-z][0-9A-Za-z-]*(\[?=[0-9A-Za-z-]*\]?)?
+longopt_re = --[a-z][0-9A-Za-z-]*(\[?=[0-9A-Za-z-]*]?)?
 sc_two_space_separator_in_usage:
 	@prohibit='^   *(-[A-Za-z],)? $(longopt_re) [^ ].*\\$$'		\
 	halt='help2man requires at least two spaces between an option and its description'\
@@ -789,7 +856,7 @@ sc_useless_cpp_parens:
 # #if HAVE_HEADER_H that you remove, be sure that your project explicitly
 # requires the gnulib module that guarantees the usability of that header.
 gl_assured_headers_ = \
-  cd $(gnulib_dir)/lib && echo *.in.h|sed 's/\.in\.h//g'
+  cd $(gnulib_dir)/lib && echo *.in.h|$(SED) 's/\.in\.h//g'
 
 # Convert the list of names to upper case, and replace each space with "|".
 az_ = abcdefghijklmnopqrstuvwxyz
@@ -840,24 +907,29 @@ define def_sym_regex
 	      && perl -lne '$(gl_extract_significant_defines_)' $$f;	\
 	  done;								\
 	) | sort -u							\
-	  | sed 's/^/^ *# *(define|undef)  */;s/$$/\\>/'
+	  | $(SED) 's/^/^ *# *(define|undef)  */;s/$$/\\>/'
 endef
 
 # Don't define macros that we already get from gnulib header files.
 sc_prohibit_always-defined_macros:
 	@if test -d $(gnulib_dir); then					\
-	  case $$(echo all: | grep -l -f - Makefile) in Makefile);; *)	\
+	  case $$(echo all: | $(GREP) -l -f - Makefile) in Makefile);; *) \
 	    echo '$(ME): skipping $@: you lack GNU grep' 1>&2; exit 0;;	\
 	  esac;								\
-	  $(def_sym_regex) | grep -E -f - $$($(VC_LIST_EXCEPT))		\
-	    && { echo '$(ME): define the above via some gnulib .h file'	\
-		  1>&2;  exit 1; } || :;				\
+	  regex=$$($(def_sym_regex)); export regex;			\
+	  $(VC_LIST_EXCEPT)						\
+	    | xargs sh -c 'echo $$regex | $(GREP) -E -f - "$$@"'	\
+		dummy /dev/null						\
+	    && { printf '$(ME): define the above'			\
+			' via some gnulib .h file\n' 1>&2;		\
+		 exit 1; }						\
+	    || :;							\
 	fi
 # ==================================================================
 
 # Prohibit checked in backup files.
 sc_prohibit_backup_files:
-	@$(VC_LIST) | grep '~$$' &&				\
+	@$(VC_LIST) | $(GREP) '~$$' &&					\
 	  { echo '$(ME): found version controlled backup file' 1>&2;	\
 	    exit 1; } || :
 
@@ -876,7 +948,7 @@ sc_GFDL_version:
 	  $(_sc_search_regexp)
 
 # Don't use Texinfo's @acronym{}.
-# http://lists.gnu.org/archive/html/bug-gnulib/2010-03/msg00321.html
+# https://lists.gnu.org/r/bug-gnulib/2010-03/msg00321.html
 texinfo_suffix_re_ ?= \.(txi|texi(nfo)?)$$
 sc_texinfo_acronym:
 	@prohibit='@acronym\{'						\
@@ -931,9 +1003,11 @@ require_exactly_one_NL_at_EOF_ =					\
     }									\
   END { exit defined $$fail }
 sc_prohibit_empty_lines_at_EOF:
-	@perl -le '$(require_exactly_one_NL_at_EOF_)' $$($(VC_LIST_EXCEPT)) \
-	  || { echo '$(ME): empty line(s) or no newline at EOF'		\
-		1>&2; exit 1; } || :
+	@$(VC_LIST_EXCEPT)						\
+	  | xargs perl -le '$(require_exactly_one_NL_at_EOF_)'		\
+	  || { echo '$(ME): empty line(s) or no newline at EOF' 1>&2;	\
+	       exit 1; }						\
+	  || :
 
 # Make sure we don't use st_blocks.  Use ST_NBLOCKS instead.
 # This is a bit of a kludge, since it prevents use of the string
@@ -959,8 +1033,13 @@ perl_filename_lineno_text_ =						\
     -e '    print "$$ARGV:$$n:$$v\n";'					\
     -e '  }'
 
+prohibit_doubled_words_ = \
+    the then in an on if is it but for or at and do to can
+# expand the regex before running the check to avoid using expensive captures
+prohibit_doubled_word_expanded_ = \
+    $(join $(prohibit_doubled_words_),$(addprefix \s+,$(prohibit_doubled_words_)))
 prohibit_doubled_word_RE_ ?= \
-  /\b(then?|[iao]n|i[fst]|but|f?or|at|and|[dt]o)\s+\1\b/gims
+    /\b(?:$(subst $(_sp),|,$(prohibit_doubled_word_expanded_)))\b/gims
 prohibit_doubled_word_ =						\
     -e 'while ($(prohibit_doubled_word_RE_))'				\
     $(perl_filename_lineno_text_)
@@ -971,9 +1050,12 @@ prohibit_doubled_word_ =						\
 ignore_doubled_word_match_RE_ ?= ^$$
 
 sc_prohibit_doubled_word:
-	@perl -n -0777 $(prohibit_doubled_word_) $$($(VC_LIST_EXCEPT))	\
-	  | grep -vE '$(ignore_doubled_word_match_RE_)'			\
-	  | grep . && { echo '$(ME): doubled words' 1>&2; exit 1; } || :
+	@$(VC_LIST_EXCEPT)						\
+	  | xargs perl -n -0777 $(prohibit_doubled_word_)		\
+	  | $(GREP) -vE '$(ignore_doubled_word_match_RE_)'		\
+	  | $(GREP) .							\
+	  && { echo '$(ME): doubled words' 1>&2; exit 1; }		\
+	  || :
 
 # A regular expression matching undesirable combinations of words like
 # "can not"; this matches them even when the two words appear on different
@@ -983,10 +1065,11 @@ sc_prohibit_doubled_word:
 # Also prohibit a prefix matching "\w+ +".
 # @pxref gets the same see/also treatment and should be parenthesized;
 # presume it must *not* start a sentence.
+# POSIX spells it "timestamp" rather than "time\s+stamp", so we do, too.
 bad_xref_re_ ?= (?:[\w,:;] +|(?:see|also)\s+)\@xref\{
 bad_pxref_re_ ?= (?:[.!?]|(?:see|also))\s+\@pxref\{
 prohibit_undesirable_word_seq_RE_ ?=					\
-  /(?:\bcan\s+not\b|$(bad_xref_re_)|$(bad_pxref_re_))/gims
+  /(?:\bcan\s+not\b|\btime\s+stamps?\b|$(bad_xref_re_)|$(bad_pxref_re_))/gims
 prohibit_undesirable_word_seq_ =					\
     -e 'while ($(prohibit_undesirable_word_seq_RE_))'			\
     $(perl_filename_lineno_text_)
@@ -996,10 +1079,20 @@ prohibit_undesirable_word_seq_ =					\
 ignore_undesirable_word_sequence_RE_ ?= ^$$
 
 sc_prohibit_undesirable_word_seq:
-	@perl -n -0777 $(prohibit_undesirable_word_seq_)		\
-	     $$($(VC_LIST_EXCEPT))					\
-	  | grep -vE '$(ignore_undesirable_word_sequence_RE_)' | grep .	\
-	  && { echo '$(ME): undesirable word sequence' >&2; exit 1; } || :
+	@$(VC_LIST_EXCEPT)						\
+	  | xargs perl -n -0777 $(prohibit_undesirable_word_seq_)	\
+	  | $(GREP) -vE '$(ignore_undesirable_word_sequence_RE_)'	\
+	  | $(GREP) .							\
+	  && { echo '$(ME): undesirable word sequence' >&2; exit 1; }   \
+	  || :
+
+# Except for shell files and for loops, double semicolon is probably a mistake
+sc_prohibit_double_semicolon:
+	@prohibit='; *;[	{} \]*(/[/*]|$$)'			\
+	in_vc_files='\.[chly]$$'					\
+	exclude='\bfor *\(.*\)'						\
+	halt="Double semicolon detected"				\
+	  $(_sc_search_regexp)
 
 _ptm1 = use "test C1 && test C2", not "test C1 -''a C2"
 _ptm2 = use "test C1 || test C2", not "test C1 -''o C2"
@@ -1023,7 +1116,8 @@ sc_prohibit_test_double_equal:
 # definition of LDADD from the appropriate Makefile.am and exits 0
 # when it contains "ICONV".
 sc_proper_name_utf8_requires_ICONV:
-	@progs=$$(grep -l 'proper_name_utf8 ''("' $$($(VC_LIST_EXCEPT)));\
+	@progs=$$($(VC_LIST_EXCEPT)					\
+		    | xargs $(GREP) -l 'proper_name_utf8 ''("');	\
 	if test "x$$progs" != x; then					\
 	  fail=0;							\
 	  for p in $$progs; do						\
@@ -1032,7 +1126,7 @@ sc_proper_name_utf8_requires_ICONV:
 	      -ne 'exit !(/^LDADD =(.+?[^\\]\n)/ms && $$1 =~ /ICONV/)'	\
 	      $$dir/Makefile.am && continue;				\
 	    base=$$(basename "$$p" .c);					\
-	    grep "$${base}_LDADD.*ICONV)" $$dir/Makefile.am > /dev/null	\
+	    $(GREP) "$${base}_LDADD.*ICONV)" $$dir/Makefile.am > /dev/null	\
 	      || { fail=1; echo 1>&2 "$(ME): $$p uses proper_name_utf8"; }; \
 	  done;								\
 	  test $$fail = 1 &&						\
@@ -1054,12 +1148,12 @@ sc_const_long_option:
 	  $(_sc_search_regexp)
 
 NEWS_hash =								\
-  $$(sed -n '/^\*.* $(PREV_VERSION_REGEXP) ([0-9-]*)/,$$p'		\
+  $$($(SED) -n '/^\*.* $(PREV_VERSION_REGEXP) ([0-9-]*)/,$$p'		\
        $(srcdir)/NEWS							\
      | perl -0777 -pe							\
 	's/^Copyright.+?Free\sSoftware\sFoundation,\sInc\.\n//ms'	\
      | md5sum -								\
-     | sed 's/ .*//')
+     | $(SED) 's/ .*//')
 
 # Ensure that we don't accidentally insert an entry into an old NEWS block.
 sc_immutable_NEWS:
@@ -1093,12 +1187,12 @@ sc_makefile_at_at_check:
           -e ' && !/(\w+)\s+=.*\@\1\@$$/'				\
           -e ''$(_makefile_at_at_check_exceptions)			\
 	  -e 'and (print "$$ARGV:$$.: $$_"), $$m=1; END {exit !$$m}'	\
-	    $$($(VC_LIST_EXCEPT) | grep -E '(^|/)(Makefile\.am|[^/]+\.mk)$$') \
+	    $$($(VC_LIST_EXCEPT) | $(GREP) -E '(^|/)(Makefile\.am|[^/]+\.mk)$$') \
 	  && { echo '$(ME): use $$(...), not @...@' 1>&2; exit 1; } || :
 
 news-check: NEWS
-	$(AM_V_GEN)if sed -n $(news-check-lines-spec)p $<		\
-	    | grep -E $(news-check-regexp) >/dev/null; then		\
+	$(AM_V_GEN)if $(SED) -n $(news-check-lines-spec)p $<		\
+	    | $(GREP) -E $(news-check-regexp) >/dev/null; then		\
 	  :;								\
 	else								\
 	  echo 'NEWS: $$(news-check-regexp) failed to match' 1>&2;	\
@@ -1121,6 +1215,21 @@ fix_po_file_diag = \
 'you have changed the set of files with translatable diagnostics;\n\
 apply the above patch\n'
 
+# Generate a list of files in which to search for translatable strings.
+perl_translatable_files_list_ =						\
+  -e 'foreach $$file (@ARGV) {'						\
+  -e '	\# Consider only file extensions with one or two letters'	\
+  -e '	$$file =~ /\...?$$/ or next;'					\
+  -e '	\# Ignore m4 and mk files'					\
+  -e '	$$file =~ /\.m[4k]$$/ and next;'				\
+  -e '	\# Ignore a .c or .h file with a corresponding .l or .y file'	\
+  -e '	$$file =~ /(.+)\.[ch]$$/ && (-e "$${1}.l" || -e "$${1}.y")'	\
+  -e '	  and next;'							\
+  -e '	\# Skip unreadable files'					\
+  -e '	-r $$file or next;'						\
+  -e '	print "$$file ";'						\
+  -e '}'
+
 # Verify that all source files using _() (more specifically, files that
 # match $(_gl_translatable_string_re)) are listed in po/POTFILES.in.
 po_file ?= $(srcdir)/po/POTFILES.in
@@ -1128,25 +1237,13 @@ generated_files ?= $(srcdir)/lib/*.[ch]
 _gl_translatable_string_re ?= \b(N?_|gettext *)\([^)"]*("|$$)
 sc_po_check:
 	@if test -f $(po_file); then					\
-	  grep -E -v '^(#|$$)' $(po_file)				\
-	    | grep -v '^src/false\.c$$' | sort > $@-1;			\
-	  files=;							\
-	  for file in $$($(VC_LIST_EXCEPT)) $(generated_files); do	\
-	    test -r $$file || continue;					\
-	    case $$file in						\
-	      *.m4|*.mk) continue ;;					\
-	      *.?|*.??) ;;						\
-	      *) continue;;						\
-	    esac;							\
-	    case $$file in						\
-	    *.[ch])							\
-	      base=`expr " $$file" : ' \(.*\)\..'`;			\
-	      { test -f $$base.l || test -f $$base.y; } && continue;;	\
-	    esac;							\
-	    files="$$files $$file";					\
-	  done;								\
-	  grep -E -l '$(_gl_translatable_string_re)' $$files		\
-	    | sed 's|^$(_dot_escaped_srcdir)/||' | sort -u > $@-2;	\
+	  $(GREP) -E -v '^(#|$$)' $(po_file)				\
+	    | $(GREP) -v '^src/false\.c$$' | sort > $@-1;		\
+	  { $(VC_LIST_EXCEPT); echo $(generated_files); }		\
+	    | xargs perl $(perl_translatable_files_list_)		\
+	    | xargs $(GREP) -E -l '$(_gl_translatable_string_re)'	\
+	    | $(SED) 's|^$(_dot_escaped_srcdir)/||'			\
+	    | sort -u > $@-2;						\
 	  diff -u -L $(po_file) -L $(po_file) $@-1 $@-2			\
 	    || { printf '$(ME): '$(fix_po_file_diag) 1>&2; exit 1; };	\
 	  rm -f $@-1 $@-2;						\
@@ -1192,7 +1289,7 @@ sc_copyright_check:
 	in_vc_files=$(sample-test)					\
 	halt='out of date copyright in $(sample-test); update it'	\
 	  $(_sc_search_regexp)
-	@require='Copyright @copyright\{\} .*'$$(date +%Y)' Free'	\
+	@require='Copyright @copyright\{\} .*'$$(date +%Y)		\
 	in_vc_files=$(texi)						\
 	halt='out of date copyright in $(texi); update it'		\
 	  $(_sc_search_regexp)
@@ -1210,18 +1307,21 @@ _hv_regex_weak ?= ^ *\. .*/init\.sh"
 _hv_regex_strong ?= ^ *\. "\$${srcdir=\.}/init\.sh"
 sc_cross_check_PATH_usage_in_tests:
 	@if test -f $(_hv_file); then					\
-	  grep -l 'VERSION mismatch' $(_hv_file) >/dev/null		\
+	  $(GREP) -l 'VERSION mismatch' $(_hv_file) >/dev/null		\
 	    || { echo "$@: skipped: no such file: $(_hv_file)" 1>&2;	\
 		 exit 0; };						\
-	  grep -lE '$(_hv_regex_strong)' $(_hv_file) >/dev/null		\
+	  $(GREP) -lE '$(_hv_regex_strong)' $(_hv_file) >/dev/null	\
 	    || { echo "$@: $(_hv_file) lacks conforming use of init.sh" 1>&2; \
 		 exit 1; };						\
-	  good=$$(grep -E '$(_hv_regex_strong)' $(_hv_file));		\
-	  grep -LFx "$$good"						\
-		$$(grep -lE '$(_hv_regex_weak)' $$($(VC_LIST_EXCEPT)))	\
-	      | grep . &&						\
-	    { echo "$(ME): the above files use path_prepend_ inconsistently" \
-		1>&2; exit 1; } || :;					\
+	  good=$$($(GREP) -E '$(_hv_regex_strong)' $(_hv_file));	\
+	  $(VC_LIST_EXCEPT)						\
+	    | xargs $(GREP) -lE '$(_hv_regex_weak)'			\
+	    | xargs $(GREP) -LFx "$$good"				\
+	    | $(GREP) .							\
+	    && { printf "$(ME): the above files use"			\
+			" path_prepend_ inconsistently\n" 1>&2;		\
+		 exit 1; }						\
+	    || :;							\
 	fi
 
 # BRE regex of file contents to identify a test script.
@@ -1258,7 +1358,7 @@ sc_vulnerable_makefile_CVE-2009-4029:
 	halt=$$(printf '%s\n'						\
 	  'the above files are vulnerable; beware of running'		\
 	  '  "make dist*" rules, and upgrade to fixed automake'		\
-	  '  see http://bugzilla.redhat.com/542609 for details')	\
+	  '  see https://bugzilla.redhat.com/show_bug.cgi?id=542609 for details') \
 	  $(_sc_search_regexp)
 
 sc_vulnerable_makefile_CVE-2012-3386:
@@ -1267,7 +1367,7 @@ sc_vulnerable_makefile_CVE-2012-3386:
 	halt=$$(printf '%s\n'						\
 	  'the above files are vulnerable; beware of running'		\
 	  '  "make distcheck", and upgrade to fixed automake'		\
-	  '  see http://bugzilla.redhat.com/CVE-2012-3386 for details')	\
+	  '  see https://bugzilla.redhat.com/show_bug.cgi?id=CVE-2012-3386 for details') \
 	  $(_sc_search_regexp)
 
 vc-diff-check:
@@ -1282,17 +1382,23 @@ vc-diff-check:
 
 rel-files = $(DIST_ARCHIVES)
 
-gnulib_dir ?= $(srcdir)/gnulib
-gnulib-version = $$(cd $(gnulib_dir) && git describe)
+gnulib-version = $$(cd $(gnulib_dir)				\
+                    && { git describe || git rev-parse --short=10 HEAD; } )
 bootstrap-tools ?= autoconf,automake,gnulib
 
+gpgv = $$(gpgv2 --version >/dev/null && echo gpgv2 || echo gpgv)
 # If it's not already specified, derive the GPG key ID from
 # the signed tag we've just applied to mark this release.
 gpg_key_ID ?=								\
   $$(cd $(srcdir)							\
      && git cat-file tag v$(VERSION)					\
-        | gpgv --status-fd 1 --keyring /dev/null - - 2>/dev/null	\
-        | awk '/^\[GNUPG:\] ERRSIG / {print $$3; exit}')
+        | $(gpgv) --status-fd 1 --keyring /dev/null - - 2>/dev/null	\
+        | $(AWK) '/^\[GNUPG:] ERRSIG / {print $$3; exit}')
+gpg_key_email ?=							\
+  $$(gpg --list-key --with-colons $(gpg_key_ID) 2>/dev/null		\
+	| $(AWK) -F: '/^uid/ {print $$10; exit}'			\
+	| $(SED) -n 's/.*<\(.*\)>/\1/p')
+gpg_keyring_url ?= https://savannah.gnu.org/project/release-gpgkeys.php?group=$(PACKAGE)&download=1
 
 translation_project_ ?= coordinator@translationproject.org
 
@@ -1311,7 +1417,7 @@ announcement_mail_headers_alpha =		\
 announcement_mail_Cc_beta = $(announcement_mail_Cc_alpha)
 announcement_mail_headers_beta = $(announcement_mail_headers_alpha)
 
-announcement_mail_Cc_ ?= $(announcement_mail_Cc_$(release-type))
+announcement_Cc_ ?= $(announcement_Cc_$(release-type))
 announcement_mail_headers_ ?= $(announcement_mail_headers_$(release-type))
 announcement: NEWS ChangeLog $(rel-files)
 # Not $(AM_V_GEN) since the output of this command serves as
@@ -1323,12 +1429,15 @@ announcement: NEWS ChangeLog $(rel-files)
 	    --prev=$(PREV_VERSION)					\
 	    --curr=$(VERSION)						\
 	    --gpg-key-id=$(gpg_key_ID)					\
+	    $$(test -n "$(gpg_key_email)" &&				\
+	       echo --gpg-key-email="$(gpg_key_email)")			\
+	    $$(test -n "$(gpg_keyring_url)" &&				\
+	       echo --gpg-keyring-url="$(gpg_keyring_url)")		\
 	    --srcdir=$(srcdir)						\
 	    --news=$(srcdir)/NEWS					\
 	    --bootstrap-tools=$(bootstrap-tools)			\
 	    $$(case ,$(bootstrap-tools), in (*,gnulib,*)		\
 	       echo --gnulib-version=$(gnulib-version);; esac)		\
-	    --no-print-checksums					\
 	    $(addprefix --url-dir=, $(url_dir_list))
 
 .PHONY: release-commit
@@ -1341,8 +1450,8 @@ release-commit:
 ## Updating files.  ##
 ## ---------------- ##
 
-ftp-gnu = ftp://ftp.gnu.org/gnu
-www-gnu = http://www.gnu.org
+ftp-gnu = https://ftp.gnu.org/gnu
+www-gnu = https://www.gnu.org
 
 upload_dest_dir_ ?= $(PACKAGE)
 upload_command =						\
@@ -1393,8 +1502,8 @@ public-submodule-commit:
 		&& git --version >/dev/null 2>&1; then			\
 	  cd $(srcdir) &&						\
 	  git submodule --quiet foreach					\
-	      test '"$$(git rev-parse "$$sha1")"'			\
-	      = '"$$(git merge-base origin "$$sha1")"'			\
+	      'test "$$(git rev-parse "$$sha1")"			\
+		  = "$$(git merge-base origin "$$sha1")"'		\
 	    || { echo '$(ME): found non-public submodule commit' >&2;	\
 		 exit 1; };						\
 	else								\
@@ -1413,7 +1522,7 @@ check: $(gl_public_submodule_commit)
 ALL_RECURSIVE_TARGETS += alpha beta stable
 alpha beta stable: $(local-check) writable-files $(submodule-checks)
 	$(AM_V_GEN)test $@ = stable					\
-	  && { echo $(VERSION) | grep -E '^[0-9]+(\.[0-9]+)+$$'		\
+	  && { echo $(VERSION) | $(GREP) -E '^[0-9]+(\.[0-9]+)+$$'	\
 	       || { echo "invalid version string: $(VERSION)" 1>&2; exit 1;};}\
 	  || :
 	$(AM_V_at)$(MAKE) vc-diff-check
@@ -1424,7 +1533,8 @@ alpha beta stable: $(local-check) writable-files $(submodule-checks)
 	$(AM_V_at)$(MAKE) -s emit_upload_commands RELEASE_TYPE=$@
 
 release:
-	$(AM_V_GEN)$(MAKE) $(release-type)
+	$(AM_V_GEN)$(MAKE) _version
+	$(AM_V_at)$(MAKE) $(release-type)
 
 # Override this in cfg.mk if you follow different procedures.
 release-prep-hook ?= release-prep
@@ -1489,7 +1599,10 @@ gen-coverage:
 		--highlight --frames --legend \
 		--title "$(PACKAGE_NAME)"
 
-coverage: init-coverage build-coverage gen-coverage
+coverage:
+	$(MAKE) init-coverage
+	$(MAKE) build-coverage
+	$(MAKE) gen-coverage
 
 # Some projects carry local adjustments for gnulib modules via patches in
 # a gnulib patch directory whose default name is gl/ (defined in bootstrap
@@ -1507,8 +1620,8 @@ refresh-gnulib-patches:
 	       -e 'END{defined $$d and print $$d}' bootstrap.conf);	\
 	  test -n "$$t" && gl=$$t;					\
 	fi;								\
-	for diff in $$(cd $$gl; git ls-files | grep '\.diff$$'); do	\
-	  b=$$(printf %s "$$diff"|sed 's/\.diff$$//');			\
+	for diff in $$(cd $$gl; git ls-files | $(GREP) '\.diff$$'); do	\
+	  b=$$(printf %s "$$diff"|$(SED) 's/\.diff$$//');		\
 	  VERSION_CONTROL=none						\
 	    patch "$(gnulib_dir)/$$b" "$$gl/$$diff" || exit 1;		\
 	  ( cd $(gnulib_dir) || exit 1;					\
@@ -1519,7 +1632,7 @@ refresh-gnulib-patches:
 # Update gettext files.
 PACKAGE ?= $(shell basename $(PWD))
 PO_DOMAIN ?= $(PACKAGE)
-POURL = http://translationproject.org/latest/$(PO_DOMAIN)/
+POURL = https://translationproject.org/latest/$(PO_DOMAIN)/
 PODIR ?= po
 refresh-po:
 	rm -f $(PODIR)/*.po && \
@@ -1527,14 +1640,35 @@ refresh-po:
 	wget --no-verbose --directory-prefix $(PODIR) --no-directories --recursive --level 1 --accept .po --accept .po.1 $(POURL) && \
 	echo 'en@boldquot' > $(PODIR)/LINGUAS && \
 	echo 'en@quot' >> $(PODIR)/LINGUAS && \
-	ls $(PODIR)/*.po | sed 's/\.po//;s,$(PODIR)/,,' | sort >> $(PODIR)/LINGUAS
+	ls $(PODIR)/*.po | $(SED) 's/\.po//;s,$(PODIR)/,,' | \
+	  sort >> $(PODIR)/LINGUAS
 
- # Running indent once is not idempotent, but running it twice is.
+# Indentation
+
+indent_args ?= -ppi 1
+C_SOURCES ?= $$($(VC_LIST_EXCEPT) | grep '\.[ch]\(.in\)\?$$')
 INDENT_SOURCES ?= $(C_SOURCES)
+exclude_file_name_regexp--indent ?= $(exclude_file_name_regexp--sc_indent)
+
 .PHONY: indent
-indent:
-	indent $(INDENT_SOURCES)
-	indent $(INDENT_SOURCES)
+indent: # Running indent once is not idempotent, but running it twice is.
+	$(AM_V_GEN)indent $(indent_args) $(INDENT_SOURCES) && \
+	indent $(indent_args) $(INDENT_SOURCES)
+
+sc_indent:
+	@if ! command -v indent > /dev/null; then			\
+	    echo 1>&2 '$(ME): sc_indent: indent is missing';		\
+	else								\
+	  fail=0; files="$(INDENT_SOURCES)";				\
+	  for f in $$files; do						\
+	    indent $(indent_args) -st $$f				\
+		| indent $(indent_args) -st -				\
+		| diff -u $$f - || fail=1;				\
+	  done;								\
+	  test $$fail = 1 &&						\
+	    { echo 1>&2 '$(ME): code format error, try "make indent"';	\
+	      exit 1; } || :;						\
+	fi
 
 # If you want to set UPDATE_COPYRIGHT_* environment variables,
 # put the assignments in this variable.
@@ -1549,7 +1683,7 @@ update-copyright-env ?=
 # in the file .x-update-copyright.
 .PHONY: update-copyright
 update-copyright:
-	$(AM_V_GEN)grep -l -w Copyright                                  \
+	$(AM_V_GEN)$(GREP) -l -w Copyright                               \
 	  $$(export VC_LIST_EXCEPT_DEFAULT=COPYING && $(VC_LIST_EXCEPT)) \
 	  | $(update-copyright-env) xargs $(srcdir)/$(_build-aux)/$@
 
@@ -1563,9 +1697,9 @@ _gl_TS_dir ?= src
 ALL_RECURSIVE_TARGETS += sc_tight_scope
 sc_tight_scope: tight-scope.mk
 	@fail=0;							\
-	if ! grep '^ *export _gl_TS_headers *=' $(srcdir)/cfg.mk	\
+	if ! $(GREP) '^ *export _gl_TS_headers *=' $(srcdir)/cfg.mk	\
 		> /dev/null						\
-	   && ! grep -w noinst_HEADERS $(srcdir)/$(_gl_TS_dir)/Makefile.am \
+	   && ! $(GREP) -w noinst_HEADERS $(srcdir)/$(_gl_TS_dir)/Makefile.am \
 		> /dev/null 2>&1; then					\
 	    echo '$(ME): skipping $@';					\
 	else								\
@@ -1580,9 +1714,8 @@ sc_tight_scope: tight-scope.mk
 	exit $$fail
 
 tight-scope.mk: $(ME)
-	@rm -f $@ $@-t
 	@perl -ne '/^# TS-start/.../^# TS-end/ and print' $(srcdir)/$(ME) > $@-t
-	@chmod a=r $@-t && mv $@-t $@
+	@mv $@-t $@
 
 ifeq (a,b)
 # TS-start
@@ -1593,7 +1726,7 @@ ifeq (a,b)
 # do not need to be marked.  Symbols matching '__.*' are
 # reserved by the compiler, so are automatically excluded below.
 _gl_TS_unmarked_extern_functions ?= main usage
-_gl_TS_function_match ?= /^(?:$(_gl_TS_extern)) +.*?(\S+) *\(/
+_gl_TS_function_match ?= /^(?:$(_gl_TS_extern)) +.*?(\w+) *\(/
 
 # If your project uses a macro like "XTERN", then put
 # the following in cfg.mk to override this default:
@@ -1613,8 +1746,8 @@ _gl_TS_unmarked_extern_vars ?=
 # a macro like this: GLOBAL(type, var_name, initializer), then you
 # can override this definition to automatically extract those names:
 # export _gl_TS_var_match = \
-#   /^(?:$(_gl_TS_extern)) .*?\**(\w+)(\[.*?\])?;/ || /\bGLOBAL\(.*?,\s*(.*?),/
-_gl_TS_var_match ?= /^(?:$(_gl_TS_extern)) .*?(\w+)(\[.*?\])?;/
+#   /^(?:$(_gl_TS_extern)) .*?\**(\w+)(\[.*?])?;/ || /\bGLOBAL\(.*?,\s*(.*?),/
+_gl_TS_var_match ?= /^(?:$(_gl_TS_extern)) .*?(\w+)(\[.*?])?;/
 
 # The names of object files in (or relative to) $(_gl_TS_dir).
 _gl_TS_obj_files ?= *.$(OBJEXT)
@@ -1626,6 +1759,7 @@ _gl_TS_other_headers ?= *.h
 
 .PHONY: _gl_tight_scope
 _gl_tight_scope: $(bin_PROGRAMS)
+	sed_wrap='s/^/^_?/;s/$$/$$/';					\
 	t=exceptions-$$$$;						\
 	trap 's=$$?; rm -f $$t; exit $$s' 0;				\
 	for sig in 1 2 3 13 15; do					\
@@ -1635,21 +1769,21 @@ _gl_tight_scope: $(bin_PROGRAMS)
 	       test -f $$f && d= || d=$(srcdir)/; echo $$d$$f; done`;	\
 	hdr=`for f in $(_gl_TS_headers); do				\
 	       test -f $$f && d= || d=$(srcdir)/; echo $$d$$f; done`;	\
-	( printf '^%s$$\n' '__.*' $(_gl_TS_unmarked_extern_functions);	\
-	  grep -h -A1 '^extern .*[^;]$$' $$src				\
-	    | grep -vE '^(extern |--)' | sed 's/ .*//';			\
+	( printf '%s\n' '__.*' $(_gl_TS_unmarked_extern_functions);	\
+	  $(GREP) -h -A1 '^extern .*[^;]$$' $$src			\
+	    | $(GREP) -vE '^(extern |--|#)' | $(SED) 's/ .*//; /^$$/d';	\
 	  perl -lne							\
-	     '$(_gl_TS_function_match) and print "^$$1\$$"' $$hdr;	\
-	) | sort -u > $$t;						\
-	nm -e $(_gl_TS_obj_files) | sed -n 's/.* T //p'|grep -Ev -f $$t	\
+	     '$(_gl_TS_function_match) and print $$1' $$hdr;		\
+	) | sort -u | $(SED) "$$sed_wrap" > $$t;			\
+	nm -g $(_gl_TS_obj_files)|$(SED) -n 's/.* T //p'|$(GREP) -Ev -f $$t \
 	  && { echo the above functions should have static scope >&2;	\
 	       exit 1; } || : ;						\
-	( printf '^%s$$\n' '__.*' $(_gl_TS_unmarked_extern_vars);	\
-	  perl -lne '$(_gl_TS_var_match) and print "^$$1\$$"'		\
+	( printf '%s\n' '__.*' main $(_gl_TS_unmarked_extern_vars);	\
+	  perl -lne '$(_gl_TS_var_match) and print $$1'			\
 		$$hdr $(_gl_TS_other_headers)				\
-	) | sort -u > $$t;						\
-	nm -e $(_gl_TS_obj_files) | sed -n 's/.* [BCDGRS] //p'		\
-            | sort -u | grep -Ev -f $$t					\
+	) | sort -u | $(SED) "$$sed_wrap" > $$t;			\
+	nm -g $(_gl_TS_obj_files) | $(SED) -n 's/.* [BCDGRS] //p'	\
+            | sort -u | $(GREP) -Ev -f $$t				\
 	  && { echo the above variables should have static scope >&2;	\
 	       exit 1; } || :
 # TS-end

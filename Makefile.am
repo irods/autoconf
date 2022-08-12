@@ -1,6 +1,7 @@
 # Make Autoconf.
 
-# Copyright (C) 1999-2004, 2006-2015 Free Software Foundation, Inc.
+# Copyright (C) 1999-2004, 2006-2017, 2020-2022 Free Software
+# Foundation, Inc.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,7 +14,7 @@
 # GNU General Public License for more details.
 
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -33,6 +34,7 @@ EXTRA_DIST = ChangeLog.0 ChangeLog.1 ChangeLog.2 ChangeLog.3 \
 	     build-aux/git-version-gen \
 	     build-aux/announce-gen build-aux/gnupload \
 	     build-aux/gitlog-to-changelog \
+	     build-aux/help-extract.pl \
 	     .prev-version .version
 
 edit = sed \
@@ -68,15 +70,13 @@ MAINTAINERCLEANFILES += $(srcdir)/INSTALL
 
 # Don't leave blank line at end of file.
 OMIT_TRAILING_EMPTY_LINES = '/^$$/H; /^$$/d; x; s/\n//p; s/\n*//; x'
-# Prefer 'plain quotes' over `makeinfo quotes'.
-CONVERT_QUOTES = "s/\`\([^']*\)'/'\1'/g"
 
 $(srcdir)/INSTALL: $(top_srcdir)/doc/install.texi
 	echo @firstparagraphindent insert				\
 	  | cat - $(top_srcdir)/doc/install.texi > tmp.texi
 	$(MAKEINFO) $(custom_MAKEINFOFLAGS) $(MAKEINFOFLAGS)		\
 	     --plaintext tmp.texi					\
-	  | sed -e $(CONVERT_QUOTES) -e $(OMIT_TRAILING_EMPTY_LINES)	\
+	  | sed -e $(OMIT_TRAILING_EMPTY_LINES)				\
 	     > $@-t && mv $@-t $@
 	rm -f tmp.texi
 endif
@@ -124,8 +124,14 @@ dist-hook: gen-ChangeLog
 
 # Arrange to remove the symlink to GNUmakefile in VPATH builds.
 # TODO remove this once automake vs. AC_CONFIG_LINKS issue is fixed.
+# Delete ChangeLog if it is the dummy created by the rule above.
+# The sed construct below distinguishes between a file whose sole
+# contents are "dummy", and a file whose first line is "dummy" but then
+# has other stuff, without reading the whole thing.
 distclean-local:
 	if test x"$(VPATH)" != x ; then rm -f GNUmakefile ; fi
+	if test "x`sed -ne 'l;2q' ChangeLog 2> /dev/null`" = 'xdummy$$'; \
+	then rm -f ChangeLog; fi
 
 include $(srcdir)/bin/local.mk
 include $(srcdir)/doc/local.mk
@@ -146,7 +152,7 @@ check-coverage-run: all
 check-coverage-report:
 	@if test ! -d $(PERL_COVERAGE_DB); then \
 	  echo "No coverage database found in '$(PERL_COVERAGE_DB)'." >&2; \
-	  echo "Please run 'make check-coverage' first" >&2; \
+	  echo "Please run '$(MAKE) check-coverage' first" >&2; \
 	  exit 1; \
 	fi
 	$(PERL_COVER) $(PERL_COVERAGE_DB) $(PERL_COVER_FLAGS)

@@ -2,8 +2,8 @@
 
 AT_BANNER([Fortran low level compiling/preprocessing macros.])
 
-# Copyright (C) 2000-2001, 2003, 2008-2015 Free Software Foundation,
-# Inc.
+# Copyright (C) 2000-2001, 2003, 2008-2017, 2020-2022 Free Software
+# Foundation, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@ AT_BANNER([Fortran low level compiling/preprocessing macros.])
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Since the macros which compile are required by most tests, check
 # them first.  But remember that looking for a compiler is even more
@@ -109,10 +109,15 @@ AT_DATA([foo.f],
       end
 ]])
 
-: "${MAKE=make}"
-AT_CHECK([env ACLOCAL=true autoreconf -vi], [], [ignore], [ignore])
+# Prevent autoreconf from running aclocal, which might not exist,
+# or could barf over warnings in third-party macro files.
+AT_DATA([aclocal.m4])
+ACLOCAL=true
+export ACLOCAL
+
+AT_CHECK([autoreconf -vi], [], [ignore], [ignore])
 AT_CHECK_CONFIGURE
-AT_CHECK([$MAKE], [], [ignore], [ignore])
+AT_CHECK_MAKE
 
 AT_CLEANUP
 
@@ -149,18 +154,23 @@ AT_DATA([foo.f],
       end
 ]])
 
-: "${MAKE=make}"
-AT_CHECK([env ACLOCAL=true autoreconf -vi], [], [ignore], [ignore])
+# Prevent autoreconf from running aclocal, which might not exist,
+# or could barf over warnings in third-party macro files.
+AT_DATA([aclocal.m4])
+ACLOCAL=true
+export ACLOCAL
+
+AT_CHECK([autoreconf -vi], [], [ignore], [ignore])
 AT_CHECK_CONFIGURE
-AT_CHECK([$MAKE], [], [ignore], [ignore])
+AT_CHECK_MAKE
 
 AT_CLEANUP
 
 
 # We don't test the AC_F77_LIBRARY_LDFLAGS macro on its own because of
 # (autoconf.info)Fortran Compiler:
-#      The macros `AC_F77_DUMMY_MAIN' and `AC_FC_DUMMY_MAIN' or
-#    `AC_F77_MAIN' and `AC_FC_MAIN' are probably also necessary to link
+#      The macros 'AC_F77_DUMMY_MAIN' and 'AC_FC_DUMMY_MAIN' or
+#    'AC_F77_MAIN' and 'AC_FC_MAIN' are probably also necessary to link
 #    C/C++ with Fortran; see below.
 #
 # and we would need libtool to create shared libraries.
@@ -237,11 +247,15 @@ int main(int argc, char *argv[])
 ]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_AUTOHEADER
+AT_CHECK_AUTOHEADER([], [
+  F77_DUMMY_MAIN
+  F77_FUNC
+  F77_FUNC_
+  FC_DUMMY_MAIN_EQ_F77
+])
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./cprogram])
+AT_CHECK_MAKE
+AT_CHECK([./cprogram])
 
 AT_CLEANUP
 
@@ -315,11 +329,15 @@ int main (int argc, char *argv[])
 ]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_AUTOHEADER
+AT_CHECK_AUTOHEADER([], [
+  FC_DUMMY_MAIN
+  FC_DUMMY_MAIN_EQ_F77
+  FC_FUNC
+  FC_FUNC_
+])
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./cprogram])
+AT_CHECK_MAKE
+AT_CHECK([./cprogram])
 
 AT_CLEANUP
 
@@ -391,14 +409,19 @@ int F77_MAIN (int argc, char *argv[])
 ]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_AUTOHEADER
+AT_CHECK_AUTOHEADER([], [
+  F77_DUMMY_MAIN
+  F77_FUNC
+  F77_FUNC_
+  F77_MAIN
+  FC_DUMMY_MAIN_EQ_F77
+])
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./cprogram], [], [output from C main
-dnl  some output from Fortran sources
-dnl more output from C main
-dnl ])
+AT_CHECK_MAKE
+AT_CHECK([./cprogram], [], [output from C main
+ some output from Fortran sources
+more output from C main
+])
 
 AT_CLEANUP
 
@@ -470,14 +493,19 @@ int FC_MAIN (int argc, char *argv[])
 ]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_AUTOHEADER
+AT_CHECK_AUTOHEADER([], [
+  FC_DUMMY_MAIN
+  FC_DUMMY_MAIN_EQ_F77
+  FC_FUNC
+  FC_FUNC_
+  FC_MAIN
+])
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./cprogram], [], [output from C main
-dnl  some output from Fortran sources
-dnl more output from C main
-dnl ])
+AT_CHECK_MAKE
+AT_CHECK([./cprogram], [], [output from C main
+ some output from Fortran sources
+more output from C main
+])
 
 AT_CLEANUP
 
@@ -547,11 +575,13 @@ int main(int argc, char *argv[])
 ]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_AUTOHEADER
+AT_CHECK_AUTOHEADER([], [
+  F77_DUMMY_MAIN
+  FC_DUMMY_MAIN_EQ_F77
+])
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./cprogram])
+AT_CHECK_MAKE
+AT_CHECK([./cprogram])
 
 AT_CLEANUP
 
@@ -621,11 +651,14 @@ int main(int argc, char *argv[])
 ]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_AUTOHEADER
+AT_CHECK_AUTOHEADER([], [
+  FC_DUMMY_MAIN
+  FC_DUMMY_MAIN_EQ_F77
+])
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./cprogram])
+AT_CHECK_MAKE
+AT_CHECK([./cprogram])
+
 AT_CLEANUP
 
 
@@ -708,8 +741,7 @@ end
 
 AT_CHECK_AUTOCONF
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
+AT_CHECK_MAKE
 
 AT_CLEANUP
 
@@ -808,8 +840,8 @@ this is not correct fortran
 
 AT_CHECK_AUTOCONF
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
+AT_CHECK_MAKE
+AT_CHECK([./prog])
 
 AT_CLEANUP
 
@@ -844,9 +876,8 @@ end
 
 AT_CHECK_AUTOCONF
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./prog])
+AT_CHECK_MAKE
+AT_CHECK([./prog])
 
 AT_CLEANUP
 
@@ -882,9 +913,8 @@ end
 
 AT_CHECK_AUTOCONF
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./prog])
+AT_CHECK_MAKE
+AT_CHECK([./prog])
 
 AT_CLEANUP
 
@@ -920,9 +950,8 @@ C      fixed-form style comment
 
 AT_CHECK_AUTOCONF
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./prog])
+AT_CHECK_MAKE
+AT_CHECK([./prog])
 
 AT_CLEANUP
 
@@ -959,9 +988,8 @@ C      fixed-form style comment
 
 AT_CHECK_AUTOCONF
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
-dnl AT_CHECK([./prog])
+AT_CHECK_MAKE
+AT_CHECK([./prog])
 
 AT_CLEANUP
 
@@ -981,23 +1009,28 @@ AT_DATA([Makefile.in],
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f@ $<
 
 clean:
-	rm -f *.@OBJEXT@ prog@EEXEXT@
+	rm -f *.@OBJEXT@ prog@EXEEXT@
 ]])
 
+# When preceded by 7 spaces and followed by newline, line_80 generates
+# a line of exactly 79 columns, line_132 generates a line of exactly 131
+# coluns, and line_250 generates a line of exactly 250 columns.
+# FIXME: Shouldn't line_80 and line_132 generate lines that are one column
+# longer, so that their contents match the variable names?
 line_80=\
 'subroutine foo(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11)'
 line_132=\
 'subroutine foo(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,'\
 'arg12,arg13,arg14,arg15,arg16,arg17,arg18,arg19)'
-line_254=\
-'subroutine foo(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,'\
+line_250=\
+'subroutine foofoo(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,'\
 'arg12,arg13,arg14,arg15,arg16,arg17,arg18,arg19,arg20,arg21,arg22,arg23,'\
 'arg24,arg25,arg26,arg27,arg28,arg29,arg30,arg31,arg32,arg33,arg34,arg35,'\
-'arg36,arg37,arg38,arg39,arg40)'
+'arg36,arg37,arg38,arg39)'
 
-for len in 80 132 254
+for len in 80 132 250
 do
-  if test $len -eq 254; then arg=unlimited; else arg=$len; fi
+  if test $len -eq 250; then arg=unlimited; else arg=$len; fi
   eval long_line=\$line_$len
 
   # Try free-form first, it has a bigger chance of succeeding.
@@ -1023,10 +1056,9 @@ EOF
 
     AT_CHECK_AUTOCONF
     AT_CHECK_CONFIGURE
-    : "${MAKE=make}"
-    AT_CHECK([$MAKE], [], [ignore], [ignore])
-    dnl AT_CHECK([./prog])
-    AT_CHECK([$MAKE clean], [], [ignore], [ignore])
+    AT_CHECK_MAKE
+    AT_CHECK([./prog])
+    AT_CHECK_MAKE([clean])
 
   done
 done
@@ -1049,7 +1081,7 @@ AT_DATA([Makefile.in],
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f@ $<
 
 clean:
-	rm -f *.@OBJEXT@ prog@EEXEXT@
+	rm -f *.@OBJEXT@ prog@EXEEXT@
 ]])
 
 cat >configure.ac <<EOF
@@ -1085,10 +1117,9 @@ AT_DATA([prog.f],
 
 AT_CHECK_AUTOCONF
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [ignore], [ignore])
+AT_CHECK_MAKE
 AT_CHECK([./prog || exit 1], [1], [ignore], [ignore])
-AT_CHECK([$MAKE clean], [], [ignore], [ignore])
+AT_CHECK_MAKE([clean])
 
 AT_CLEANUP
 
@@ -1153,12 +1184,96 @@ AT_DATA([prog.f],
 
 AT_CHECK_AUTOCONF
 AT_CHECK_CONFIGURE
-: "${MAKE=make}"
-AT_CHECK([$MAKE], [], [stdout], [stderr])
+AT_CHECK_MAKE([], [], [], [stdout], [stderr])
 # Both the FCFLAGS setting from configure.ac, and the Makefile rule
 # should add to the module search path.
 AT_CHECK([grep 'sub .*sub ' stdout stderr], [], [ignore])
 AT_CHECK([./prog], [], [ignore], [ignore])
-AT_CHECK([$MAKE clean], [], [ignore], [ignore])
+AT_CHECK_MAKE([clean])
+
+AT_CLEANUP
+
+
+## --------------------- ##
+## AC_F77_CRAY_POINTERS. ##
+## --------------------- ##
+
+AT_SETUP([AC_F77_CRAY_POINTERS])
+
+AT_DATA([configure.ac],
+[[AC_INIT
+AC_PROG_F77
+AC_F77_CRAY_POINTERS
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+]])
+
+AT_DATA([Makefile.in],
+[[prog@EXEEXT@: prog.@OBJEXT@
+	@F77@ @FFLAGS@ -o $@ prog.@OBJEXT@ @LIBS@
+
+.SUFFIXES: .f .@OBJEXT@
+.f.@OBJEXT@:
+	@F77@ @FFLAGS@ -c $<
+
+clean:
+	rm -f *.@OBJEXT@ prog@EXEEXT@
+]])
+
+AT_DATA([prog.f],
+[[      program main
+      integer aptr(2)
+      pointer (iptr, aptr)
+      end
+]])
+
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE
+AT_CHECK_MAKE
+AT_CHECK([./prog])
+AT_CHECK_MAKE([clean])
+
+AT_CLEANUP
+
+
+## -------------------- ##
+## AC_FC_CRAY_POINTERS. ##
+## -------------------- ##
+
+AT_SETUP([AC_FC_CRAY_POINTERS])
+
+AT_DATA([configure.ac],
+[[AC_INIT
+AC_PROG_FC
+AC_FC_SRCEXT([f])
+AC_FC_CRAY_POINTERS
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+]])
+
+AT_DATA([Makefile.in],
+[[prog@EXEEXT@: prog.@OBJEXT@
+	@FC@ @FCFLAGS@ -o $@ prog.@OBJEXT@ @LIBS@
+
+.SUFFIXES: .f .@OBJEXT@
+.f.@OBJEXT@:
+	@FC@ @FCFLAGS@ -c @FCFLAGS_f@ $<
+
+clean:
+	rm -f *.@OBJEXT@ prog@EXEEXT@
+]])
+
+AT_DATA([prog.f],
+[[      program main
+      integer aptr(2)
+      pointer (iptr, aptr)
+      end
+]])
+
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE
+AT_CHECK_MAKE
+AT_CHECK([./prog])
+AT_CHECK_MAKE([clean])
 
 AT_CLEANUP

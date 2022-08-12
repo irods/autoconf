@@ -2,7 +2,8 @@
 
 AT_BANNER([C low level compiling/preprocessing macros.])
 
-# Copyright (C) 2000-2006, 2008-2015 Free Software Foundation, Inc.
+# Copyright (C) 2000-2006, 2008-2017, 2020-2022 Free Software
+# Foundation, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +16,7 @@ AT_BANNER([C low level compiling/preprocessing macros.])
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 # Since the macros which compile are required by most tests, check
@@ -27,22 +28,24 @@ AT_BANNER([C low level compiling/preprocessing macros.])
 ## Extensions.  ##
 ## ------------ ##
 
-# As far as we know only `foo', `foo.exe' are possible executable,
-# and `foo.o', `foo.obj' are possible object files.  Autoconf must not
-# know that, but it is OK for the test suite to take this into account.
-AT_CHECK_MACRO([Extensions],
+AT_CHECK_CONFIGURE_AC([Object file extensions],
 [[AC_PROG_CC
-case $ac_exeext in
-  '' | '.exe' ) ;;
-  * ) AC_MSG_ERROR([suspicious executable suffix: $ac_exeext]);;
-esac
 
-case $ac_objext in
-  'o' | 'obj' ) ;;
-  * ) AC_MSG_ERROR([suspicious object suffix: $ac_objext]);;
-esac
+# As far as we know only 'foo', 'foo.exe' are possible executable,
+# and 'foo.o', 'foo.obj' are possible object files.  Autoconf must not
+# know that, but it is OK for the test suite to take this into account.
+AS@&t@_CASE([$ac_exeext],
+  ['' | '.exe'],
+    [],
+    [AC_MSG_ERROR([suspicious executable suffix: $ac_exeext])])
+
+AS@&t@_CASE([$ac_objext],
+  ['o' | 'obj'],
+    [],
+    [AC_MSG_ERROR([suspicious object suffix: $ac_objext])])
+
+AC_OUTPUT
 ]])
-
 
 
 ## -------------------------- ##
@@ -57,12 +60,12 @@ AT_SETUP([Broken/missing compilers])
 
 AT_DATA([configure.ac],
 [[AC_INIT
-CC=no-such-compiler
 AC_PROG_CC
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
-AT_CHECK_CONFIGURE([], 77, ignore, ignore)
+AT_CHECK_CONFIGURE([CC=no-such-compiler], 77, ignore, ignore)
 
 AT_CLEANUP
 
@@ -71,31 +74,34 @@ AT_CLEANUP
 ## C keywords.  ##
 ## ------------ ##
 
-# GCC supports `const', `typeof', and `volatile'.
-AT_CHECK_MACRO([C keywords],
+AT_CHECK_CONFIGURE_AC([C keywords],
 [[AC_PROG_CC
+
 AC_C_CONST
 AC_C_TYPEOF
 AC_C_VOLATILE
+
+# If the C compiler is GCC, AC_C_{CONST,TYPEOF,VOLATILE} ought to all
+# detect support for their respective keyword.
 case $GCC,$ac_cv_c_const,$ac_cv_c_typeof,$ac_cv_c_volatile in
  yes,*no*)
-   AC_MSG_ERROR([failed to detect `const', `typeof', or `volatile' support]);;
+   AC_MSG_ERROR([failed to detect 'const', 'typeof', or 'volatile' support]);;
 esac
 ]])
-
 
 
 ## --------------------------------- ##
 ## AC_PROG_CPP requires AC_PROG_CC.  ##
 ## --------------------------------- ##
 
-# Must invoke AC_PROG_CC.
-AT_CHECK_MACRO([AC_PROG_CPP requires AC_PROG_CC],
+AT_CHECK_CONFIGURE_AC([AC_PROG_CPP requires AC_PROG_CC],
 [[AC_PROG_CPP
-test -z "$CC" &&
-   AC_MSG_ERROR([looked for a C preprocessor without looking for a compiler])
-]])
 
+# AC_PROG_CPP should have AC_REQUIREd AC_PROG_CC.
+if test -z "$CC"; then
+   AC_MSG_ERROR([looked for a C preprocessor without looking for a compiler])
+fi
+]])
 
 
 ## --------------------------- ##
@@ -124,14 +130,14 @@ CPP="./mycpp $CPP"
 
 # Exercise CPP.
 
-AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <stdio.h>]])],
-  [AC_DEFINE([HAVE_STDIO_H], [1], [Define if you have stdio.h])])
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <float.h>]])],
+  [AC_DEFINE([HAVE_FLOAT_H], [1], [Define if you have float.h])])
 AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <autoconf_io.h>]])],
   [AC_DEFINE([HAVE_AUTOCONF_IO_H], [1], [Define if you have autoconf_io.h])])
 ]])
 AT_CHECK_DEFINES(
 [/* #undef HAVE_AUTOCONF_IO_H */
-#define HAVE_STDIO_H 1
+#define HAVE_FLOAT_H 1
 ])
 
 AT_CLEANUP
@@ -163,15 +169,15 @@ test "x$ac_c_preproc_warn_flag" != xyes &&
   AC_MSG_ERROR([failed to detect preprocessor warning option])
 
 # Exercise CPP.
-AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <stdio.h>]])],
-  [AC_DEFINE([HAVE_STDIO_H], [1], [Define if you have stdio.h])])
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <float.h>]])],
+  [AC_DEFINE([HAVE_FLOAT_H], [1], [Define if you have float.h])])
 AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <autoconf_io.h>]])],
   [AC_DEFINE([HAVE_AUTOCONF_IO_H], [1], [Define if you have autoconf_io.h])])
 ]])
 
 AT_CHECK_DEFINES(
 [/* #undef HAVE_AUTOCONF_IO_H */
-#define HAVE_STDIO_H 1
+#define HAVE_FLOAT_H 1
 ])
 
 AT_CLEANUP
@@ -212,15 +218,15 @@ test "$CPP" != "$CC -E" &&
   AC_MSG_ERROR([error messages on stderr cause the preprocessor selection to fail])
 
 # Exercise CPP.
-AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <stdio.h>]])],
-  [AC_DEFINE([HAVE_STDIO_H], [1], [Define if you have stdio.h])])
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <float.h>]])],
+  [AC_DEFINE([HAVE_FLOAT_H], [1], [Define if you have float.h])])
 AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <autoconf_io.h>]])],
   [AC_DEFINE([HAVE_AUTOCONF_IO_H], [1], [Define if you have autoconf_io.h])])
 ]])
 
 AT_CHECK_DEFINES(
 [/* #undef HAVE_AUTOCONF_IO_H */
-#define HAVE_STDIO_H 1
+#define HAVE_FLOAT_H 1
 ])
 
 AT_CLEANUP
@@ -230,21 +236,21 @@ AT_CLEANUP
 ## AC_NO_EXECUTABLES (working linker).  ##
 ## ------------------------------------ ##
 
-AT_CHECK_MACRO([AC_NO_EXECUTABLES (working linker)],
-[AC_NO_EXECUTABLES
+AT_CHECK_CONFIGURE_AC([AC_NO_EXECUTABLES (working linker)],
+[[AC_NO_EXECUTABLES
 AC_PROG_CC
-])
+]])
 
 
 ## ----------------------------------- ##
 ## AC_NO_EXECUTABLES (broken linker).  ##
 ## ----------------------------------- ##
 
-AT_CHECK_MACRO([AC_NO_EXECUTABLES (broken linker)],
-[LDFLAGS=-lnosuchlibrary
+AT_CHECK_CONFIGURE_AC([AC_NO_EXECUTABLES (broken linker)],
+[[LDFLAGS=-lnosuchlibrary
 AC_NO_EXECUTABLES
 AC_PROG_CC
-])
+]])
 
 
 ## -------------------------- ##
@@ -260,7 +266,7 @@ AT_SETUP([AC_USE_SYSTEM_EXTENSIONS])
 _AT_CHECK_AC_MACRO(
 [[AC_AIX
 AC_DEFINE([__EXTENSIONS__], [1], [Manually defined for Solaris])
-]])
+]], [], [-Wno-obsolete])
 
 _AT_CHECK_AC_MACRO(
 [[AC_USE_SYSTEM_EXTENSIONS
@@ -324,11 +330,11 @@ class foo { int x; };
 class foo foobar;
 ]])
 
-AT_CHECK([autoconf])
-AT_CHECK([autoheader])
-AT_CHECK([./configure $configure_options], [], [ignore], [ignore])
-AT_CHECK([${MAKE-make} cpp-works || exit 77], [], [ignore], [ignore])
-AT_CHECK([${MAKE-make}], [], [ignore], [ignore])
+AT_CHECK_AUTOCONF
+AT_CHECK_AUTOHEADER([], [restrict])
+AT_CHECK_CONFIGURE
+AT_CHECK_MAKE([cpp-works || exit 77])
+AT_CHECK_MAKE
 
 AT_CLEANUP
 
@@ -379,10 +385,9 @@ int main (void)
 }
 ]])
 
-: "${MAKE=make}"
-AT_CHECK([env ACLOCAL=true autoreconf -vi], [], [ignore], [ignore])
-AT_CHECK([./configure $configure_options], [], [ignore], [ignore])
-AT_CHECK([$MAKE], [], [ignore], [ignore])
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE
+AT_CHECK_MAKE
 
 AT_CLEANUP
 
@@ -422,9 +427,8 @@ AT_DATA([foo.cpp],
 }
 ]])
 
-: "${MAKE=make}"
-AT_CHECK([env ACLOCAL=true autoreconf -vi], [], [ignore], [ignore])
-AT_CHECK([./configure $configure_options], [], [ignore], [ignore])
-AT_CHECK([$MAKE], [], [ignore], [ignore])
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE
+AT_CHECK_MAKE
 
 AT_CLEANUP

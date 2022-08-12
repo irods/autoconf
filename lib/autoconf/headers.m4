@@ -1,8 +1,8 @@
 # This file is part of Autoconf.			-*- Autoconf -*-
 # Checking for headers.
 #
-# Copyright (C) 1988, 1999-2004, 2006, 2008-2015 Free Software
-# Foundation, Inc.
+# Copyright (C) 1988, 1999-2004, 2006, 2008-2017, 2020-2022 Free
+# Software Foundation, Inc.
 
 # This file is part of Autoconf.  This program is free
 # software; you can redistribute it and/or modify it under the
@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU General Public License
 # and a copy of the Autoconf Configure Script Exception along with
 # this program; see the files COPYINGv3 and COPYING.EXCEPTION
-# respectively.  If not, see <http://www.gnu.org/licenses/>.
+# respectively.  If not, see <https://www.gnu.org/licenses/>.
 
 # Written by David MacKenzie, with help from
 # Franc,ois Pinard, Karl Berry, Richard Pixley, Ian Lance Taylor,
@@ -49,7 +49,7 @@
 # This used to check for headers using the preprocessor only, but we
 # have now switched to running a full compilation, so that we learn
 # about the usability of a header instead of its mere presence.
-# The old behavior is still available by specifying `-' as the
+# The old behavior is still available by specifying '-' as the
 # INCLUDES, but this triggers a deprecation warning.
 #
 # The m4_indir allows for fewer expansions of $@.
@@ -73,18 +73,21 @@ m4_define([_AC_CHECK_HEADER_COMPILE_BODY],
 ])# _AC_CHECK_HEADER_COMPILE_BODY
 
 
+m4_define([_AC_CHECK_HEADER_COMPILE_FN],
+[AC_REQUIRE_SHELL_FN([ac_fn_]_AC_LANG_ABBREV[_check_header_compile],
+  [AS_FUNCTION_DESCRIBE([ac_fn_]_AC_LANG_ABBREV[_check_header_compile],
+    [LINENO HEADER VAR INCLUDES],
+    [Tests whether HEADER exists and can be compiled using the include files
+     in INCLUDES, setting the cache variable VAR accordingly.])],
+  [_AC_CHECK_HEADER_COMPILE_BODY])])
+
 # _AC_CHECK_HEADER_COMPILE(HEADER-FILE,
 #		       [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
 #		       [INCLUDES = DEFAULT-INCLUDES])
 # --------------------------------------------------------------
 # Check the compiler accepts HEADER-FILE.  The INCLUDES are defaulted.
 AC_DEFUN([_AC_CHECK_HEADER_COMPILE],
-[AC_REQUIRE_SHELL_FN([ac_fn_]_AC_LANG_ABBREV[_check_header_compile],
-  [AS_FUNCTION_DESCRIBE([ac_fn_]_AC_LANG_ABBREV[_check_header_compile],
-    [LINENO HEADER VAR INCLUDES],
-    [Tests whether HEADER exists and can be compiled using the include files
-     in INCLUDES, setting the cache variable VAR accordingly.])],
-  [$0_BODY])]dnl
+[_AC_CHECK_HEADER_COMPILE_FN()]dnl
 [AS_VAR_PUSHDEF([ac_Header], [ac_cv_header_$1])]dnl
 [ac_fn_[]_AC_LANG_ABBREV[]_check_header_compile ]dnl
 ["$LINENO" "$1" "ac_Header" "AS_ESCAPE([AC_INCLUDES_DEFAULT([$4])], [""])"
@@ -110,9 +113,9 @@ m4_define([_AC_CHECK_HEADER_PREPROC_BODY],
 # --------------------------------------------------------------
 # Check the preprocessor accepts HEADER-FILE.
 AC_DEFUN([_AC_CHECK_HEADER_PREPROC],
-[AC_DIAGNOSE([obsolete], [Checking for headers with the preprocessor is
+[m4_warn([obsolete], [Checking for headers with the preprocessor is
 deprecated. Specify prerequisite code to AC_CHECK_HEADER
-instead of using fourth argument `-'. (Many headers need
+instead of using fourth argument '-'. (Many headers need
 no prerequisites. If you truly need to test whether
 something passes the preprocessor but not the compiler,
 use AC_PREPROC_IFELSE.)])]dnl
@@ -139,12 +142,12 @@ AS_VAR_POPDEF([ac_Header])])# _AC_CHECK_HEADER_PREPROC
 #   AU_DEFUN([_AC_CHECK_HEADER_OLD],
 #     [AC_CHECK_HEADER([$1], [$2], [$3], [-])])
 AC_DEFUN([_AC_CHECK_HEADER_OLD],
-[AC_DIAGNOSE([obsolete], [The macro `$0' is obsolete.
+[m4_warn([obsolete], [The macro '$0' is obsolete.
 You should use AC_CHECK_HEADER with a fourth argument.])]dnl
 [_AC_CHECK_HEADER_PREPROC($@)])
 
 AC_DEFUN([_AC_CHECK_HEADER_NEW],
-[AC_DIAGNOSE([obsolete], [The macro `$0' is obsolete.
+[m4_warn([obsolete], [The macro '$0' is obsolete.
 You should use AC_CHECK_HEADER with a fourth argument.])]dnl
 [_AC_CHECK_HEADER_COMPILE($@)])
 
@@ -170,6 +173,37 @@ m4_define([_AH_CHECK_HEADER],
 m4_define([AH_CHECK_HEADERS],
 [m4_foreach_w([AC_Header], [$1], [_AH_CHECK_HEADER(m4_defn([AC_Header]))])])
 
+# _AC_CHECK_HEADERS_ONE_U(HEADER-FILE)
+# -------------------------------
+# Perform the actions that need to be performed unconditionally
+# for every HEADER-FILE that *could* be checked for by AC_CHECK_HEADERS.
+m4_define([_AC_CHECK_HEADERS_ONE_U],
+[AS_LITERAL_WORD_IF([$1],
+  [_AH_CHECK_HEADER([$1])],
+  [m4_warn([syntax], [AC_CHECK_HEADERS($1): you should use literals])])])
+
+# _AC_CHECK_HEADERS_ONE_S(HEADER-FILE, [INCLUDES])
+# -------------------------------
+# If HEADER-FILE exists, define HAVE_HEADER_FILE.  HEADER-FILE must be literal.
+# Used by AC_CHECK_HEADERS for its simplest case, when its HEADER-FILE list
+# is fully literal and no optional actions were supplied.
+# INCLUDES is as for AC_CHECK_HEADER.
+m4_define([_AC_CHECK_HEADERS_ONE_S],
+[_AH_CHECK_HEADER([$1])]dnl
+[AC_CHECK_HEADER([$1],
+  [AC_DEFINE(AS_TR_CPP([HAVE_$1]))], [], [$2])])
+
+# _AC_CHECK_HEADERS_ONE_C(HEADER-FILE, [ACTION-IF-FOUND],
+#    [ACTION-IF-NOT-FOUND], [INCLUDES])
+# -------------------------------------------------------------------------
+# If HEADER-FILE exists, define HAVE_HEADER-FILE and execute ACTION-IF-FOUND.
+# Otherwise execute ACTION-IF-NOT-FOUND.  HEADER-FILE can be a shell variable.
+# Used by AC_CHECK_HEADERS for complex cases.
+# INCLUDES is as for AC_CHECK_HEADER.
+m4_define([_AC_CHECK_HEADERS_ONE_C],
+[AC_CHECK_HEADER([$1],
+  [AC_DEFINE_UNQUOTED(AS_TR_CPP([HAVE_]$1)) $2],
+  [$3], [$4])])
 
 # AC_CHECK_HEADERS(HEADER-FILE...,
 #		   [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
@@ -179,14 +213,16 @@ m4_define([AH_CHECK_HEADERS],
 # ""), and perform ACTION-IF-FOUND or ACTION-IF-NOT-FOUND for each
 # header.  INCLUDES is as for AC_CHECK_HEADER.  Additionally, make the
 # preprocessor definition HAVE_HEADER_FILE available for each found
-# header.  Either ACTION may include `break' to stop the search.
+# header.  Either ACTION may include 'break' to stop the search.
 AC_DEFUN([AC_CHECK_HEADERS],
-[m4_map_args_w([$1], [_AH_CHECK_HEADER(], [)])]dnl
-[AS_FOR([AC_header], [ac_header], [$1],
-[AC_CHECK_HEADER(AC_header,
-		 [AC_DEFINE_UNQUOTED(AS_TR_CPP([HAVE_]AC_header)) $2],
-		 [$3], [$4])dnl])
-])# AC_CHECK_HEADERS
+[_$0(m4_validate_w([$1]), [$2], [$3], [$4])])
+
+m4_define([_AC_CHECK_HEADERS],
+[m4_if([$2$3]AS_LITERAL_IF([$1], [[yes]], [[no]]), [yes],
+       [m4_map_args_w([$1], [_AC_CHECK_HEADERS_ONE_S(], [, [$4])])],
+       [m4_map_args_w([$1], [_AC_CHECK_HEADERS_ONE_U(], [)])]dnl
+       [AS_FOR([AC_header], [ac_header], [$1],
+               [_AC_CHECK_HEADERS_ONE_C(AC_header, [$2], [$3], [$4])])])])
 
 
 # _AC_CHECK_HEADER_ONCE(HEADER-FILE)
@@ -194,10 +230,11 @@ AC_DEFUN([AC_CHECK_HEADERS],
 # Check for a single HEADER-FILE once.
 m4_define([_AC_CHECK_HEADER_ONCE],
 [_AH_CHECK_HEADER([$1])AC_DEFUN([_AC_Header_]m4_translit([[$1]],
-    [./-], [___]),
-  [m4_divert_text([INIT_PREPARE], [AS_VAR_APPEND([ac_header_list], [" $1"])])
-_AC_HEADERS_EXPANSION])AC_REQUIRE([_AC_Header_]m4_translit([[$1]],
-    [./-], [___]))])
+    [./-], [___]), [m4_divert_text([INIT_PREPARE],
+  [AS_VAR_APPEND([ac_header_]]_AC_LANG_ABBREV[[_list],
+  [" $1 ]AS_TR_SH([$1]) AS_TR_CPP([HAVE_$1])["])])]dnl
+[_AC_HEADERS_EXPANSION(_AC_LANG_ABBREV)])AC_REQUIRE(
+  [_AC_Header_]m4_translit([[$1]], [./-], [___]))])
 
 
 # AC_CHECK_HEADERS_ONCE(HEADER-FILE...)
@@ -208,16 +245,34 @@ _AC_HEADERS_EXPANSION])AC_REQUIRE([_AC_Header_]m4_translit([[$1]],
 # and vice versa.
 AC_DEFUN([AC_CHECK_HEADERS_ONCE],
   [AC_REQUIRE([AC_CHECK_INCLUDES_DEFAULT])]dnl
-  [_AC_CHECK_HEADERS_ONCE([$1])])
+  [m4_map_args_w(m4_validate_w([$1]), [_AC_CHECK_HEADER_ONCE(], [)])])
 
-AC_DEFUN([_AC_CHECK_HEADERS_ONCE],
-  [m4_map_args_w([$1], [_AC_CHECK_HEADER_ONCE(], [)])])
 
+# _AC_HEADERS_EXPANSION(LANG)
+# ---------------------------
+# One-shot code per language LANG for checking all headers registered by
+# AC_CHECK_HEADERS_ONCE while that language was active.  We have to inline
+# portions of AC_CHECK_HEADER_COMPILE, because although we operate on shell
+# variables, we know they represent literals at that point in time,
+# where we don't want to trigger normal AS_VAR_PUSHDEF shell code.
 m4_define([_AC_HEADERS_EXPANSION],
-  [m4_divert_text([DEFAULTS], [ac_header_list=])]dnl
-  [AC_CHECK_HEADERS([$ac_header_list], [], [], [$ac_includes_default])]dnl
-  [m4_define([_AC_HEADERS_EXPANSION], [])])
-
+[m4_ifndef([$0($1)], [m4_define([$0($1)])m4_divert_text([DEFAULTS],
+[ac_header_$1_list=])ac_header= ac_cache=
+for ac_item in $ac_header_$1_list
+do
+  if test $ac_cache; then
+    _AC_CHECK_HEADER_COMPILE_FN()ac_fn_$1_check_header_compile "$LINENO" ]dnl
+[$ac_header ac_cv_header_$ac_cache "$ac_includes_default"
+    if eval test \"x\$ac_cv_header_$ac_cache\" = xyes; then
+      printf "%s\n" "[#]define $ac_item 1" >> confdefs.h
+    fi
+    ac_header= ac_cache=
+  elif test $ac_header; then
+    ac_cache=$ac_item
+  else
+    ac_header=$ac_item
+  fi
+done])])
 
 
 
@@ -238,17 +293,14 @@ dnl If ever you change this variable, please keep autoconf.texi in sync.
 [# Factoring default headers for most tests.
 ac_includes_default="\
 #include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
+#ifdef HAVE_STDIO_H
+# include <stdio.h>
 #endif
-#ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>
+#ifdef HAVE_STDLIB_H
+# include <stdlib.h>
 #endif
-#ifdef HAVE_STRINGS_H
-# include <strings.h>
+#ifdef HAVE_STRING_H
+# include <string.h>
 #endif
 #ifdef HAVE_INTTYPES_H
 # include <inttypes.h>
@@ -256,24 +308,30 @@ ac_includes_default="\
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
 #endif
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif"
 ])]dnl
-[_AC_CHECK_HEADERS_ONCE(
-  [sys/types.h sys/stat.h strings.h inttypes.h stdint.h unistd.h],
-  [], [], [$ac_includes_default])]dnl
-dnl For backward compatibility, provide unconditional AC_DEFINEs of
-dnl HAVE_STDLIB_H, HAVE_STRING_H, and STDC_HEADERS.
-[AC_DEFINE([HAVE_STDLIB_H], [1],
-  [Always define to 1, for backward compatibility.
-   You can assume <stdlib.h> exists.])]dnl
-[AC_DEFINE([HAVE_STRING_H], [1],
-  [Always define to 1, for backward compatibility.
-   You can assume <string.h> exists.])]dnl
+[dnl We have to check for all the headers that aren't part of the
+dnl C-1990 *freestanding* environment, which is all of them except stddef.h.
+m4_map_args([_AC_CHECK_HEADER_ONCE],
+  [stdio.h], [stdlib.h], [string.h], [inttypes.h], [stdint.h],
+  [strings.h], [sys/stat.h], [sys/types.h], [unistd.h])]dnl
+[AS_IF([test $ac_cv_header_stdlib_h = yes && test $ac_cv_header_string_h = yes],
 [AC_DEFINE([STDC_HEADERS], [1],
-  [Always define to 1, for backward compatibility.
-   You can assume the C90 standard headers exist.])])
+  [Define to 1 if all of the C90 standard headers exist
+   (not just the ones required in a freestanding environment).
+   This macro is provided for backward compatibility;
+   new code need not use it.])])])
 # AC_CHECK_INCLUDES_DEFAULT
 
 
@@ -282,7 +340,7 @@ dnl HAVE_STDLIB_H, HAVE_STRING_H, and STDC_HEADERS.
 # If INCLUDES is empty, expand in default includes, otherwise in
 # INCLUDES.
 # In most cases INCLUDES is not double quoted as it should, and if
-# for instance INCLUDES = `#include <stdio.h>' then unless we force
+# for instance INCLUDES = '#include <stdio.h>' then unless we force
 # a newline, the hash will swallow the closing paren etc. etc.
 # The usual failure.
 # Take no risk: for the newline.
@@ -381,7 +439,7 @@ AC_DEFUN_ONCE([AC_HEADER_ASSERT],
 #			  [ACTION-IF-FOUND], [ACTION-IF-NOT_FOUND])
 # -----------------------------------------------------------------
 # Like AC_CHECK_HEADER, except also make sure that HEADER-FILE
-# defines the type `DIR'.  dirent.h on NextStep 3.2 doesn't.
+# defines the type 'DIR'.  dirent.h on NextStep 3.2 doesn't.
 m4_define([_AC_CHECK_HEADER_DIRENT],
 [AS_VAR_PUSHDEF([ac_Header], [ac_cv_header_dirent_$1])dnl
 AC_CACHE_CHECK([for $1 that defines DIR], [ac_Header],
@@ -402,7 +460,7 @@ AS_VAR_POPDEF([ac_Header])dnl
 # Like _AH_CHECK_HEADER, but tuned to a dirent provider.
 m4_define([_AH_CHECK_HEADER_DIRENT],
 [AH_TEMPLATE(AS_TR_CPP([HAVE_$1]),
-  [Define to 1 if you have the <$1> header file, and it defines `DIR'.])])
+  [Define to 1 if you have the <$1> header file, and it defines 'DIR'.])])
 
 
 # AC_HEADER_DIRENT
@@ -427,39 +485,35 @@ fi
 
 # AC_HEADER_MAJOR
 # ---------------
+# Thanks to glibc 2.25 deprecating macros in sys/types.h, coupled with
+# back-compat to autoconf 2.69, we need the following logic:
+# Check whether <sys/types.h> compiles.
+# If <sys/mkdev.h> compiles, assume it provides major/minor/makedev.
+# Otherwise, if <sys/sysmacros.h> compiles, assume it provides the macros.
+# Otherwise, either the macros were provided by <sys/types.h>, or do
+# not exist on the platform.  Code trying to use these three macros is
+# assumed to not care about platforms that lack the macros.
 AN_FUNCTION([major],     [AC_HEADER_MAJOR])
 AN_FUNCTION([makedev],   [AC_HEADER_MAJOR])
 AN_FUNCTION([minor],     [AC_HEADER_MAJOR])
 AN_HEADER([sys/mkdev.h], [AC_HEADER_MAJOR])
 AC_DEFUN([AC_HEADER_MAJOR],
-[AC_CACHE_CHECK(whether sys/types.h defines makedev,
-		ac_cv_header_sys_types_h_makedev,
-[AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <sys/types.h>]],
-				 [[return makedev(0, 0);]])],
-		[ac_cv_header_sys_types_h_makedev=yes],
-		[ac_cv_header_sys_types_h_makedev=no])
-])
-
-if test $ac_cv_header_sys_types_h_makedev = no; then
-AC_CHECK_HEADER(sys/mkdev.h,
-		[AC_DEFINE(MAJOR_IN_MKDEV, 1,
-			   [Define to 1 if `major', `minor', and `makedev' are
+[AC_CHECK_HEADERS_ONCE([sys/types.h])
+AC_CHECK_HEADER([sys/mkdev.h],
+		[AC_DEFINE([MAJOR_IN_MKDEV], [1],
+			   [Define to 1 if 'major', 'minor', and 'makedev' are
 			    declared in <mkdev.h>.])])
-
-  if test $ac_cv_header_sys_mkdev_h = no; then
-    AC_CHECK_HEADER(sys/sysmacros.h,
-		    [AC_DEFINE(MAJOR_IN_SYSMACROS, 1,
-			       [Define to 1 if `major', `minor', and `makedev'
-				are declared in <sysmacros.h>.])])
-  fi
+if test $ac_cv_header_sys_mkdev_h = no; then
+  AC_CHECK_HEADER([sys/sysmacros.h],
+		  [AC_DEFINE([MAJOR_IN_SYSMACROS], [1],
+			     [Define to 1 if 'major', 'minor', and 'makedev'
+			      are declared in <sysmacros.h>.])])
 fi
 ])# AC_HEADER_MAJOR
 
 
 # AC_HEADER_RESOLV
 # ----------------
-# According to http://www.mcsr.olemiss.edu/cgi-bin/man-cgi?resolver+3
-# (or http://www.chemie.fu-berlin.de/cgi-bin/man/sgi_irix?resolver+3),
 # sys/types.h, netinet/in.h and arpa/nameser.h are required on IRIX.
 # netinet/in.h is needed on Cygwin, too.
 # With Solaris 9, netdb.h is required, to get symbols like HOST_NOT_FOUND.
@@ -510,7 +564,7 @@ extern char c4[S_ISSOCK (S_IFREG) ? -1 : 1];
 ]])], ac_cv_header_stat_broken=no, ac_cv_header_stat_broken=yes)])
 if test $ac_cv_header_stat_broken = yes; then
   AC_DEFINE(STAT_MACROS_BROKEN, 1,
-	    [Define to 1 if the `S_IS*' macros in <sys/stat.h> do not
+	    [Define to 1 if the 'S_IS*' macros in <sys/stat.h> do not
 	     work properly.])
 fi
 ])# AC_HEADER_STAT
@@ -523,66 +577,116 @@ AN_IDENTIFIER([bool], [AC_CHECK_HEADER_STDBOOL])
 AN_IDENTIFIER([true], [AC_CHECK_HEADER_STDBOOL])
 AN_IDENTIFIER([false],[AC_CHECK_HEADER_STDBOOL])
 AC_DEFUN([AC_CHECK_HEADER_STDBOOL],
-  [AC_CACHE_CHECK([for stdbool.h that conforms to C99],
+  [AC_CHECK_TYPES([_Bool])
+   AC_CACHE_CHECK([for stdbool.h that conforms to C99],
      [ac_cv_header_stdbool_h],
      [AC_COMPILE_IFELSE(
         [AC_LANG_PROGRAM(
-           [[
-             #include <stdbool.h>
-             #ifndef bool
-              "error: bool is not defined"
+           [[#include <stdbool.h>
+
+             #ifndef __bool_true_false_are_defined
+               #error "__bool_true_false_are_defined is not defined"
              #endif
-             #ifndef false
-              "error: false is not defined"
-             #endif
-             #if false
-              "error: false is not 0"
-             #endif
-             #ifndef true
-              "error: true is not defined"
+             char a[__bool_true_false_are_defined == 1 ? 1 : -1];
+
+             /* Regardless of whether this is C++ or "_Bool" is a
+                valid type name, "true" and "false" should be usable
+                in #if expressions and integer constant expressions,
+                and "bool" should be a valid type name.  */
+
+             #if !true
+               #error "'true' is not true"
              #endif
              #if true != 1
-              "error: true is not 1"
+               #error "'true' is not equal to 1"
              #endif
-             #ifndef __bool_true_false_are_defined
-              "error: __bool_true_false_are_defined is not defined"
+             char b[true == 1 ? 1 : -1];
+             char c[true];
+
+             #if false
+               #error "'false' is not false"
              #endif
+             #if false != 0
+               #error "'false' is not equal to 0"
+             #endif
+             char d[false == 0 ? 1 : -1];
 
-             struct s { _Bool s: 1; _Bool t; } s;
+             enum { e = false, f = true, g = false * true, h = true * 256 };
 
-             char a[true == 1 ? 1 : -1];
-             char b[false == 0 ? 1 : -1];
-             char c[__bool_true_false_are_defined == 1 ? 1 : -1];
-             char d[(bool) 0.5 == true ? 1 : -1];
-             /* See body of main program for 'e'.  */
-             char f[(_Bool) 0.0 == false ? 1 : -1];
-             char g[true];
-             char h[sizeof (_Bool)];
-             char i[sizeof s.t];
-             enum { j = false, k = true, l = false * true, m = true * 256 };
+             char i[(bool) 0.5 == true ? 1 : -1];
+             char j[(bool) 0.0 == false ? 1 : -1];
+             char k[sizeof (bool) > 0 ? 1 : -1];
+
+             struct sb { bool s: 1; bool t; } s;
+             char l[sizeof s.t > 0 ? 1 : -1];
+
              /* The following fails for
                 HP aC++/ANSI C B3910B A.05.55 [Dec 04 2003]. */
-             _Bool n[m];
-             char o[sizeof n == m * sizeof n[0] ? 1 : -1];
-             char p[-1 - (_Bool) 0 < 0 && -1 - (bool) 0 < 0 ? 1 : -1];
+             bool m[h];
+             char n[sizeof m == h * sizeof m[0] ? 1 : -1];
+             char o[-1 - (bool) 0 < 0 ? 1 : -1];
              /* Catch a bug in an HP-UX C compiler.  See
-                http://gcc.gnu.org/ml/gcc-patches/2003-12/msg02303.html
-                http://lists.gnu.org/archive/html/bug-coreutils/2005-11/msg00161.html
+         https://gcc.gnu.org/ml/gcc-patches/2003-12/msg02303.html
+         https://lists.gnu.org/archive/html/bug-coreutils/2005-11/msg00161.html
               */
-             _Bool q = true;
-             _Bool *pq = &q;
+             bool p = true;
+             bool *pp = &p;
+
+             /* C 1999 specifies that bool, true, and false are to be
+                macros, but C++ 2011 overrules this.  The C++ committee
+                was codifying existing practice, so we allow them to
+                not be macros whenever __cplusplus is defined.  */
+             #ifndef __cplusplus
+              #ifndef bool
+               #error "bool is not defined"
+              #endif
+              #ifndef false
+               #error "false is not defined"
+              #endif
+              #ifndef true
+               #error "true is not defined"
+              #endif
+             #endif
+
+             /* If _Bool is available, repeat with it all the tests
+                above that used bool.  */
+             #ifdef HAVE__BOOL
+               struct sB { _Bool s: 1; _Bool t; } t;
+
+               char q[(_Bool) 0.5 == true ? 1 : -1];
+               char r[(_Bool) 0.0 == false ? 1 : -1];
+               char u[sizeof (_Bool) > 0 ? 1 : -1];
+               char v[sizeof t.t > 0 ? 1 : -1];
+
+               _Bool w[h];
+               char x[sizeof m == h * sizeof m[0] ? 1 : -1];
+               char y[-1 - (_Bool) 0 < 0 ? 1 : -1];
+               _Bool z = true;
+               _Bool *pz = &p;
+             #endif
            ]],
            [[
-             bool e = &s;
-             *pq |= q;
-             *pq |= ! q;
-             /* Refer to every declared value, to avoid compiler optimizations.  */
-             return (!a + !b + !c + !d + !e + !f + !g + !h + !i + !!j + !k + !!l
-                     + !m + !n + !o + !p + !q + !pq);
+             bool ps = &s;
+             *pp |= p;
+             *pp |= ! p;
+
+             #ifdef HAVE__BOOL
+               _Bool pt = &t;
+               *pz |= z;
+               *pz |= ! z;
+             #endif
+
+             /* Refer to every declared value, so they cannot be
+                discarded as unused.  */
+             return (!a + !b + !c + !d + !e + !f + !g + !h + !i + !j + !k
+                     + !l + !m + !n + !o + !p + !pp + !ps
+             #ifdef HAVE__BOOL
+                     + !q + !r + !u + !v + !w + !x + !y + !z + !pt
+             #endif
+                    );
            ]])],
         [ac_cv_header_stdbool_h=yes],
         [ac_cv_header_stdbool_h=no])])
-   AC_CHECK_TYPES([_Bool])
 ])# AC_CHECK_HEADER_STDBOOL
 
 
@@ -600,10 +704,12 @@ fi
 # AU::AC_HEADER_STDC
 # ------------------
 AU_DEFUN([AC_HEADER_STDC],
-[# Autoupdate added the following line to ensure that your configure
-# script's behavior did not change.  It is probably safe to remove.
-AC_CHECK_INCLUDES_DEFAULT],
- [The preprocessor macro `STDC_HEADERS' is obsolete.
+[# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+],
+ [The preprocessor macro 'STDC_HEADERS' is obsolete.
   Except in unusual embedded environments, you can safely include all
   ISO C90 headers unconditionally.])
 
@@ -698,7 +804,7 @@ if test $ac_cv_sys_tiocgwinsz_in_termios_h != yes; then
   _AC_HEADER_TIOCGWINSZ_IN_SYS_IOCTL
   if test $ac_cv_sys_tiocgwinsz_in_sys_ioctl_h = yes; then
     AC_DEFINE(GWINSZ_IN_SYS_IOCTL,1,
-	      [Define to 1 if `TIOCGWINSZ' requires <sys/ioctl.h>.])
+	      [Define to 1 if 'TIOCGWINSZ' requires <sys/ioctl.h>.])
   fi
 fi
 ])# AC_HEADER_TIOCGWINSZ
@@ -714,12 +820,12 @@ AC_CHECK_INCLUDES_DEFAULT])
 
 # AU::AC_USG
 # ----------
-# Define `USG' if string functions are *not* in strings.h.
+# Define 'USG' if string functions are *not* in strings.h.
 AU_DEFUN([AC_USG],
 [# Obsolete code to be removed.
 AC_MSG_CHECKING([for BSD string and memory functions])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <strings.h>]],
-				[[rindex(0, 0); bzero(0, 0);]])],
+				[[rindex("", 0); bzero(0, 0);]])],
 	       [AC_MSG_RESULT(yes)],
 	       [AC_MSG_RESULT(no)
 		AC_DEFINE(USG, 1,
@@ -751,7 +857,7 @@ AU_DEFUN([AC_MEMORY_H],
 AC_CHECK_HEADERS_ONCE([memory.h])
 if test $ac_cv_header_memory_h = yes; then
    AC_DEFINE([NEED_MEMORY_H], [1],
-             [Same as `HAVE_MEMORY_H', don't depend on me.])
+             [Same as 'HAVE_MEMORY_H', don't depend on me.])
 fi
 # End of obsolete code.
 ],
@@ -762,19 +868,19 @@ to check for string.h.])
 
 # AU::AC_DIR_HEADER
 # -----------------
-# Like calling `AC_HEADER_DIRENT' and `AC_FUNC_CLOSEDIR_VOID', but
+# Like calling 'AC_HEADER_DIRENT' and 'AC_FUNC_CLOSEDIR_VOID', but
 # defines a different set of C preprocessor macros to indicate which
 # header file is found.
 AU_DEFUN([AC_DIR_HEADER],
 [AC_HEADER_DIRENT
 AC_FUNC_CLOSEDIR_VOID
 test ac_cv_header_dirent_dirent_h &&
-  AC_DEFINE([DIRENT], 1, [Same as `HAVE_DIRENT_H', don't depend on me.])
+  AC_DEFINE([DIRENT], 1, [Same as 'HAVE_DIRENT_H', don't depend on me.])
 test ac_cv_header_dirent_sys_ndir_h &&
-  AC_DEFINE([SYSNDIR], 1, [Same as `HAVE_SYS_NDIR_H', don't depend on me.])
+  AC_DEFINE([SYSNDIR], 1, [Same as 'HAVE_SYS_NDIR_H', don't depend on me.])
 test ac_cv_header_dirent_sys_dir_h &&
-  AC_DEFINE([SYSDIR], 1, [Same as `HAVE_SYS_DIR_H', don't depend on me.])
+  AC_DEFINE([SYSDIR], 1, [Same as 'HAVE_SYS_DIR_H', don't depend on me.])
 test ac_cv_header_dirent_ndir_h &&
-  AC_DEFINE([NDIR], 1, [Same as `HAVE_NDIR_H', don't depend on me.])],
-[Remove this warning and the four `AC_DEFINE' when you
-adjust your code to use `AC_HEADER_DIRENT'.])
+  AC_DEFINE([NDIR], 1, [Same as 'HAVE_NDIR_H', don't depend on me.])],
+[Remove this warning and the four 'AC_DEFINE' when you
+adjust your code to use 'AC_HEADER_DIRENT'.])

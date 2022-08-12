@@ -2,7 +2,7 @@
 
 AT_BANNER([M4sh.])
 
-# Copyright (C) 2000-2015 Free Software Foundation, Inc.
+# Copyright (C) 2000-2017, 2020-2022 Free Software Foundation, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@ AT_BANNER([M4sh.])
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ## --------------------------- ##
 ## Re-exec with CONFIG_SHELL.  ##
@@ -112,6 +112,7 @@ AT_SETUP([Configure re-execs self with CONFIG_SHELL])
 AT_DATA([configure.ac],
 [[AC_INIT
 echo foobar >> quux
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -124,10 +125,10 @@ exec sh "@S|@@"
 chmod a+x cfg-sh
 
 AT_CAPTURE_FILE([config.log])
-# Export CONFIG_SITE to /dev/null to avoid spurious diffs in expected
-# stdout/stderr.
-AT_CHECK([env CONFIG_SITE=/dev/null CONFIG_SHELL=./cfg-sh ./configure],
-         [0], [], [])
+AT_CHECK([env CONFIG_SHELL=./cfg-sh ./configure],
+         [0],
+[[configure: creating ./config.status
+]], [])
 # ./configure re-executed itself.
 AT_CHECK([test -f cfg-sh-has-run], [0])
 # And did that not to cause extra execution of later commands.
@@ -226,7 +227,7 @@ AT_CHECK([test ${ZSH_VERSION+y} && exit 77], ignore)
 # Use COUNTER, COUNTER-RE = [__LINENO__], [LINENO]
 #  or                     = [__OLINE__],  [_oline__]
 #
-# instead of the obvious $LINENO and __oline__, because they would
+# instead of the obvious $LINENO and __oline@&t@__, because they would
 # be replaced in the test suite itself, even before creating these
 # scripts.  For the same reason, grep for LINENO and _oline__ (sic).
 #
@@ -251,10 +252,10 @@ sed 's/__LINENO__/$''LINENO/g;s/__OLINE__/__''oline__/g' $1.tas >$1.as
 AT_CHECK([autom4te -l m4sh $1.as -o $1])
 ])# AT_DATA_LINENO
 
-# `_oline_', once processed and ran, produces our reference.
+# '_oline_', once processed and ran, produces our reference.
 # We check that we find ourselves by looking at a string which is
-# available only in the original script: `_oline_'.
-AT_DATA_LINENO([reference], [false], [__OLINE__], [_oline__])
+# available only in the original script: '_oline_'.
+AT_DATA_LINENO([reference], [true], [__OLINE__], [_oline__])
 AT_CHECK([./reference], 0, [stdout])
 
 # The reference:
@@ -264,7 +265,7 @@ mv stdout expout
 # Be sure to be out of the PATH.
 AT_CHECK([mkdir test || exit 77])
 
-AT_DATA_LINENO([test/test-1], [false], [__LINENO__], [LINENO])
+AT_DATA_LINENO([test/test-1], [true], [__LINENO__], [LINENO])
 AT_CHECK([./test/test-1],                          0, [expout])
 AT_CHECK([(PATH=test$PATH_SEPARATOR$PATH; export PATH; exec test-1)],
 						   0, [expout])
@@ -418,8 +419,8 @@ AT_KEYWORDS([m4sh])
 AT_DATA_M4SH([script.as],
 [[AS_INIT
 
-# The EXPR variant is allowed to fail if `expr' was considered as too
-# weak for us, in which case `as_expr=false'.
+# The EXPR variant is allowed to fail if 'expr' was considered as too
+# weak for us, in which case 'as_expr=false'.
 m4_define([DIRNAME_TEST],
 [dir=`AS_DIRNAME([$1])`
 test "$dir" = "$2" || (test -n "$3" && test "$dir" = "$3") ||
@@ -557,6 +558,180 @@ AT_CHECK([$CONFIG_SHELL ./script])
 
 AT_CLEANUP
 
+# Obsolete shell variables with the same functionality as above.
+AT_SETUP([obsolete $as@&t@_echo and $as@&t@_echo_n])
+AT_KEYWORDS([m4sh])
+
+AT_DATA_M4SH([script.as],
+[[AS_INIT
+AS_REQUIRE([_AS_ECHO_N_PREPARE])
+
+m4_define([ECHO_TEST],
+[echo=`$as_echo '$1'`
+test "X$echo" = 'X$1' ||
+  echo "\$as@&t@_echo '$1' outputs '$echo'" >&2
+
+echo=`$as_echo_n '$1'`
+test "X$echo" = 'X$1' ||
+  echo "\$as@&t@_echo_n '$1' outputs '$echo'" >&2])
+
+ECHO_TEST([-])
+ECHO_TEST([--])
+ECHO_TEST([---...---])
+ECHO_TEST([	 ])
+ECHO_TEST([-e])
+ECHO_TEST([-E])
+ECHO_TEST([-n])
+ECHO_TEST([-n -n])
+ECHO_TEST([-e -n])
+ECHO_TEST([ab\ncd])
+ECHO_TEST([abcd\c])
+ECHO_TEST([\a\b\c\f\n\r\t\v\"\])
+ECHO_TEST([ab
+cd
+e])
+ECHO_TEST([
+ ])
+ECHO_TEST([
+\c])
+AS_EXIT(0)
+]])
+
+AT_CHECK_M4SH([], 0, [],
+[[script.as:13: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:13: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:14: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:14: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:15: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:15: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:16: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:16: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:17: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:17: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:18: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:18: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:19: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:19: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:20: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:20: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:21: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:21: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:22: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:22: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:23: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:23: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:24: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:24: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:25: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:25: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:28: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:28: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+script.as:30: warning: $as@&t@_echo is obsolete; use AS@&t@_ECHO(["message"]) instead
+script.as:30: warning: $as@&t@_echo_n is obsolete; use AS@&t@_ECHO_N(["message"]) instead
+]])
+AT_CHECK([$CONFIG_SHELL ./script])
+
+AT_CLEANUP
+
+
+## ------------------------------ ##
+## Redefining AS_ECHO internals.  ##
+## ------------------------------ ##
+
+AT_SETUP([Redefining AS@&t@_ECHO internals])
+
+# None of the tests below do any AC_DEFINEs, so running autoheader is
+# a waste of time, but the skeleton generated by AT_CONFIGURE_AC needs
+# this file to exist anyway.
+AT_DATA([config.hin])
+
+# Defining a macro named 's' or 'n' should not affect AS_ECHO or
+# macros that use it.
+
+AT_CONFIGURE_AC(
+[[m4@&t@_pushdef([s], [z])
+m4@&t@_pushdef([n], [u])
+AC_MSG_NOTICE([checking whether m4sugar echo works... yes])
+AC_MSG_CHECKING([whether m4sugar echo_n works])
+AC_MSG_RESULT([yes])
+m4@&t@_popdef([s])
+m4@&t@_popdef([n])
+]])
+
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE([], [],
+[[configure: checking whether m4sugar echo works... yes
+checking whether m4sugar echo_n works... yes
+configure: creating ./config.status
+config.status: creating config.h
+]], [])
+AT_CHECK_ENV
+rm config.h
+
+# More elaborate version of the above; derived from actual code in
+# ruby 2.7.2's configure script.
+
+AT_CONFIGURE_AC(
+[[AC@&t@_DEFUN([RUBY_CHECK_SIZEOF],[
+AS@&t@_VAR_PUSHDEF([s], [ac_cv_sizeof_size])
+AC@&t@_CACHE_CHECK([size of $1],
+    [AS@&t@_TR_SH([ac_cv_sizeof_$1])],
+    [AS@&t@_TR_SH(ac_cv_sizeof_$1)=1])
+
+# fake use of 's' for illustratve purposes:
+s=42
+echo "s is defined as ${s}"
+
+AS@&t@_VAR_POPDEF([s])
+])
+
+RUBY_CHECK_SIZEOF(int)
+echo "ac_cv_sizeof_int=${ac_cv_sizeof_int}"
+]])
+
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE([], [],
+[[checking size of int... 1
+ac_cv_sizeof_size is defined as 42
+ac_cv_sizeof_int=1
+configure: creating ./config.status
+config.status: creating config.h
+]], [])
+AT_CHECK_ENV
+rm config.h
+
+# However, defining a macro named 'printf' _is_ expected to affect
+# the functioning of AS_ECHO.
+
+AT_CONFIGURE_AC(
+[[# At this point in a configure script, defining shell functions is safe.
+fn_printf_override () {
+  for arg; do
+    printf '+ %s\n' "$arg"
+  done
+  AS@&t@_UNSET([arg])
+}
+m4@&t@_pushdef([printf], [fn_printf_override])
+AC_MSG_NOTICE([checking whether m4sugar echo works... yes])
+AC_MSG_CHECKING([whether m4sugar echo_n works])
+AC_MSG_RESULT([yes])
+m4@&t@_popdef([printf])
+]])
+
+AT_CHECK_AUTOCONF
+AT_CHECK_CONFIGURE([], [],
+[[+ %s\n
++ configure: checking whether m4sugar echo works... yes
++ %s
++ checking whether m4sugar echo_n works... @&t@
++ %s\n
++ yes
+configure: creating ./config.status
+config.status: creating config.h
+]], [])
+AT_CHECK_ENV
+
+AT_CLEANUP
 
 
 ## ----------------- ##
@@ -764,8 +939,8 @@ AT_CLEANUP
 ## Negated classes in globbing.  ##
 ## ----------------------------- ##
 
-# According to http://www.in-ulm.de/~mascheck/bourne/, all shells with
-# functions also support `[!...]'.  But `[^...]' is not universally supported.
+# According to https://www.in-ulm.de/~mascheck/bourne/, all shells with
+# functions also support '[!...]'.  But '[^...]' is not universally supported.
 
 AT_SETUP([Negated classes in globbing])
 AT_KEYWORDS([m4sh])
@@ -775,11 +950,11 @@ AT_DATA_M4SH([script.as],
 
 case 'with!two!bangs' in
   *[[!a-z]]*) ;;
-           *) AS_ERROR([[`*[!a-z]*' didn't match `with!two!bangs']]);;
+           *) AS_ERROR([['*[!a-z]*' didn't match 'with!two!bangs']]);;
 esac
 
 case without in
-  *[[!a-z]]*) AS_ERROR([[`*[!a-z]*' matched `without']]);;
+  *[[!a-z]]*) AS_ERROR([['*[!a-z]*' matched 'without']]);;
 esac
 ]])
 
@@ -792,8 +967,8 @@ AT_CLEANUP
 ## Null variable substitution.  ##
 ## ---------------------------- ##
 
-# According to http://www.in-ulm.de/~mascheck/bourne/, all shells with
-# functions also support `${a:-b}'.
+# According to https://www.in-ulm.de/~mascheck/bourne/, all shells with
+# functions also support '${a:-b}'.
 
 AT_SETUP([Null variable substitution])
 AT_KEYWORDS([m4sh])
@@ -1243,13 +1418,14 @@ dnl Handle blank arguments.
 AS_IF([false], [:], [ ]) && AS_CASE([foo], [foo], []
 ) && echo seventeen
 m4_define([empty])AS_IF([:], [empty]
-) && AS_CASE([foo], [foo], [empty]) && echo eighteen
+) && AS_IF([false], [], [empty]
+) || AS_CASE([foo], [foo], [empty]) && echo eighteen
 dnl Allow for users that don't know to avoid trailing whitespace
 AS_IF([:
 ], [echo nineteen])
-dnl We can't handle AS_IF([false], [:], [empty]) unless m4_expand is
-dnl taught how to handle m4_require.  The user is responsible for
-dnl avoiding the syntax error in that case.
+set -e
+AS_IF([false], [], [echo twenty])
+set +e
 
 # check that require works correctly
 m4_for([n], 1, 9, [],
@@ -1305,6 +1481,7 @@ sixteen
 seventeen
 eighteen
 nineteen
+twenty
 foo1=1 bar1=1
 foo2=2 bar2=
 foo3=3 bar3=
@@ -1328,7 +1505,7 @@ AS_CASE([$[1]]m4_for([i], [1], ]limit[, [], [, i, echo i]))
 AS_CASE([$[1]]m4_for([i], [1], ]limit[, [], [, i, echo i]), [echo default])
 ]])
 
-dnl Add --force so autom4te doesn't think `script' is still up to date.
+dnl Add --force so autom4te doesn't think 'script' is still up to date.
 AT_CHECK_M4SH([--force])
 AT_CHECK([$CONFIG_SHELL ./script 1], [0], [[1
 1
@@ -1790,6 +1967,25 @@ body
 cleanup 5
 cleanup 1
 ]])
+
+AT_CLEANUP
+
+
+## -------------------------- ##
+## AS_INIT basename __file__. ##
+## -------------------------- ##
+
+AT_SETUP([AS@&t@_INIT basename __@&t@file__])
+AT_KEYWORDS([m4sh])
+
+AT_CHECK([mkdir sub || exit 77])
+AT_DATA_M4SH([sub/script.as], [[dnl
+AS_INIT
+]])
+AT_CHECK_AUTOM4TE([--language=m4sh sub/script.as -o script])
+AT_CHECK([grep '^# Generated from' script], [0], [dnl
+# Generated from script.as by ]m4_PACKAGE_STRING[.
+])
 
 AT_CLEANUP
 

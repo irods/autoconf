@@ -1,6 +1,6 @@
 # This file is part of Autoconf.                       -*- Autoconf -*-
 # Interface with Autotest.
-# Copyright (C) 1992-1996, 1998-2005, 2009-2015 Free Software
+# Copyright (C) 1992-1996, 1998-2005, 2009-2017, 2020-2022 Free Software
 # Foundation, Inc.
 
 # This file is part of Autoconf.  This program is free
@@ -21,7 +21,7 @@
 # You should have received a copy of the GNU General Public License
 # and a copy of the Autoconf Configure Script Exception along with
 # this program; see the files COPYINGv3 and COPYING.EXCEPTION
-# respectively.  If not, see <http://www.gnu.org/licenses/>.
+# respectively.  If not, see <https://www.gnu.org/licenses/>.
 
 # Written by David MacKenzie, with help from
 # Franc,ois Pinard, Karl Berry, Richard Pixley, Ian Lance Taylor,

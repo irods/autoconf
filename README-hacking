@@ -14,28 +14,27 @@ requirements on anyone wishing to build from the just-checked-out sources.
 For example, you have to use recent stable versions of the maintainer
 tools we depend upon, including:
 
-- Autoconf 2.60+ <http://www.gnu.org/software/autoconf/>
-- Automake 1.10+ <http://www.gnu.org/software/automake/>
-- Help2man 1.29+ <http://www.gnu.org/software/help2man/>
-- M4 1.4.6+ <http://www.gnu.org/software/m4/>
-- Perl 5.006+ <http://www.cpan.org/>
-- Texinfo 4.8+ <http://www.gnu.org/software/texinfo/>
+- Automake 1.11+ <https://www.gnu.org/software/automake/>
+- Help2man 1.29+ <https://www.gnu.org/software/help2man/>
+- M4 1.4.6+ <https://www.gnu.org/software/m4/>
+- Perl 5.006+ <https://www.cpan.org/>
+- Texinfo 4.11+ <https://www.gnu.org/software/texinfo/>
 
 The following are useful as well, if you want to be able to run commands
-like "make dist-lzma" or "make distcheck":
+like "make dist-xz" or "make distcheck":
 
-- Gzip <http://www.gnu.org/software/gzip/>
-- Tar <http://www.gnu.org/software/tar/>
-- LZMA Utils 4.32+ <http://tukaani.org/lzma/>
+- Gzip <https://www.gnu.org/software/gzip/>
+- Tar <https://www.gnu.org/software/tar/>
+- XZ Utils <https://tukaani.org/xz/>
 
 Although we try to keep the CVS mirror of the git repository usable,
 some of the tests in the testsuite will fail if git was not used to
 generate the version string.  Therefore, we recommend:
 
-- Git 1.4.4+ <http://git.or.cz/>
+- Git 1.4.4+ <https://git-scm.com/>
 
 You may find it useful to install the git-merge-changelog merge driver:
-http://git.sv.gnu.org/gitweb/?p=gnulib.git;a=blob;f=lib/git-merge-changelog.c
+https://git.savannah.gnu.org/cgit/gnulib.git/plain/lib/git-merge-changelog.c
 
 then add the following to .git/config or ~/.gitconfig:
 [merge "merge-changelog"]
@@ -45,11 +44,11 @@ then add the following to .git/config or ~/.gitconfig:
 	funcname = ^@node[\t ][\t ]*\\([^,][^,]*\\)
 
 Only building the initial full source tree will be a bit painful.
-Later, a plain `git pull && make' should be sufficient.
+Later, a plain 'git pull && make' should be sufficient.
 
 If you want to test Autoconf on a machine without git, it may be
 easier to first bootstrap Autoconf on a different machine with git,
-run `make dist', and copy the tarball to the machine under test.  It
+run 'make dist', and copy the tarball to the machine under test.  It
 should always be possible to create a self-contained tarball which
 does not rely on the bootstrap-only tools.
 
@@ -59,7 +58,7 @@ You can get an anonymous copy of the source repository using any one
 of these three methods, although the CVS mirror is less tested:
 
   $ git clone git://git.sv.gnu.org/autoconf
-  $ git clone http://git.sv.gnu.org/r/autoconf.git
+  $ git clone https://git.sv.gnu.org/r/autoconf.git
   $ cvs -d:pserver:anonymous@pserver.git.sv.gnu.org:/srv/git/autoconf.git \
       co -d autoconf HEAD
 
@@ -71,16 +70,17 @@ project, you should use this instead:
 The next step is to generate files like configure and Makefile.in:
 
   $ cd autoconf
-  $ autoreconf -vi
+  $ ./bootstrap
 
-Since we're building autoconf itself, and its tests are picky, the
-following procedure includes an extra step to ensure that some
-generated files are regenerated using the tools just built by "make"
-(if you use GNU make, the file GNUmakefile sets PATH for you):
+The bootstrap script generates the same files ‘autoreconf -vi’ would,
+in a normal package, but it uses autoconf *from the git sources* to do
+it.  This means you do not need autoconf installed already, and you do
+not need to re-generate ‘configure’ after building Autoconf.
+
+You can now build and test the package:
 
   $ ./configure
   $ make
-  $ ( PATH=`pwd`/tests:$PATH; autoreconf -vi )
   $ make check
 
 At this point, there should be no difference between your local copy,
@@ -101,6 +101,12 @@ setting the configure_options variable:
 
   $ make check TESTSUITEFLAGS='configure_options="CC=gcc-2.95"'
 
+The test suite is not automatically parallelized by ‘make -j’.  If you
+want to parallelize the testsuite, you need to use TESTSUITEFLAGS for
+that, too:
+
+  $ make check TESTSUITEFLAGS=-j8
+
 * Submitting patches
 
 All patches should be submitted to <autoconf-patches@gnu.org> for
@@ -120,18 +126,18 @@ The forms to choose from are in gnulib's doc/Copyright/ directory.
 If you want to assign a single change, you should use the file,
 doc/Copyright/request-assign.changes:
 
-    http://git.sv.gnu.org/gitweb/?p=gnulib.git;a=blob;f=doc/Copyright/request-assign.changes;hb=HEAD
+    https://git.sv.gnu.org/cgit/gnulib.git/tree/doc/Copyright/request-assign.changes
 
 If you would like to assign past and future autoconf work,
 you'd use doc/Copyright/request-assign.future:
 
-    http://git.sv.gnu.org/gitweb/?p=gnulib.git;a=blob;f=doc/Copyright/request-assign.future;hb=HEAD
+    https://git.sv.gnu.org/cgit/gnulib.git/tree/doc/Copyright/request-assign.future
 
 Enjoy!
 
 -----
 
-Copyright (C) 2002-2015 Free Software Foundation, Inc.
+Copyright (C) 2002-2017, 2020-2022 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

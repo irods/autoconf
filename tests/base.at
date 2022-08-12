@@ -2,8 +2,8 @@
 
 AT_BANNER([Autoconf base layer.])
 
-# Copyright (C) 2000-2001, 2003, 2005-2015 Free Software Foundation,
-# Inc.
+# Copyright (C) 2000-2001, 2003, 2005-2017, 2020-2022 Free Software
+# Foundation, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@ AT_BANNER([Autoconf base layer.])
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 ## ------------------------------- ##
@@ -57,7 +57,10 @@ test -z "$test1" &&
 AS_EXIT(0)
 ]])
 
-AT_CHECK_AUTOCONF
+AT_CHECK_AUTOCONF([], [0], [],
+[[trailer.m4: warning: AC_INIT was never used
+trailer.m4: warning: AC_OUTPUT was never used
+]])
 AT_CHECK_CONFIGURE
 
 AT_CLEANUP
@@ -78,7 +81,7 @@ AT_DATA([configure.ac],
 AT_CHECK_AUTOCONF([], [1], [],
 [[configure.ac:1: error: AC_REQUIRE(AC_PROG_CC): cannot be used outside of an AC_DEFUN'd macro
 configure.ac:1: the top level
-autom4te: m4 failed with exit status: 1
+autom4te: error: m4 failed with exit status: 1
 ]])
 AT_CLEANUP
 
@@ -117,7 +120,10 @@ case $multi_test:$single_test in
 esac
 ]])
 
-AT_CHECK_AUTOCONF([], 0, [])
+AT_CHECK_AUTOCONF([], 0, [],
+[[trailer.m4: warning: AC_INIT was never used
+trailer.m4: warning: AC_OUTPUT was never used
+]])
 
 AT_CHECK_CONFIGURE
 
@@ -156,11 +162,14 @@ case $multi_test:$single_test in
   ..:. ) AS_EXIT(0);;
   ..:* ) AC_MSG_ERROR([DEFUN_ONCE is broken]);;
   *:.  ) AC_MSG_ERROR([DEFUN is broken (Wow, congrats!)]);;
-     * ) AC_MSG_ERROR([received `$multi_test:$single_test']);;
+     * ) AC_MSG_ERROR([received '$multi_test:$single_test']);;
 esac
 ]])
 
-AT_CHECK_AUTOCONF([], 0, [])
+AT_CHECK_AUTOCONF([], 0, [],
+[[trailer.m4: warning: AC_INIT was never used
+trailer.m4: warning: AC_OUTPUT was never used
+]])
 AT_CHECK_CONFIGURE
 
 AT_CLEANUP
@@ -188,11 +197,14 @@ TEST
 
 case $inner_test in
   "" ) AS_EXIT(0);;
-  *  ) AC_MSG_ERROR([received `$inner_test']);;
+  *  ) AC_MSG_ERROR([received '$inner_test']);;
 esac
 ]])
 
-AT_CHECK_AUTOCONF
+AT_CHECK_AUTOCONF([], 0, [],
+[[trailer.m4: warning: AC_INIT was never used
+trailer.m4: warning: AC_OUTPUT was never used
+]])
 AT_CHECK_CONFIGURE
 
 AT_CLEANUP
@@ -208,6 +220,7 @@ AT_SETUP([AC_INIT])
 
 AT_DATA([configure.ac],
 [[AC_INIT([GNU fu], [1.0], [bug-fu@gnu.org])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -218,6 +231,38 @@ AT_CHECK([grep "^PACKAGE_TARNAME='fu'\$" configure], [], [ignore])
 
 AT_CLEANUP
 
+## ------------------------------- ##
+## AC_INIT (obsolete invocation).  ##
+## ------------------------------- ##
+
+# When AC_INIT is called with only one argument, it is equivalent to
+# passing that argument to AC_CONFIG_SRCDIR and then calling AC_INIT
+# with _no_ arguments.  In particular, PACKAGE should _not_ be set
+# to whatever the first argument is.
+
+AT_SETUP([AC_INIT (obsolete invocation)])
+
+AT_DATA([configure.ac],
+[[AC_INIT([program.c])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF
+
+# Ensure we get the expected definition:
+AT_CHECK([grep "^PACKAGE_NAME=''\$" configure], [], [ignore])
+
+# Running autoconf right now should fail because program.c doesn't exist.
+AT_CHECK_CONFIGURE([], [1], [],
+[[configure: error: cannot find sources (program.c) in . or ..
+]])
+
+# Create program.c and then it should be fine.
+AT_DATA([program.c])
+AT_CHECK_CONFIGURE
+
+AT_CLEANUP
+
 
 ## ------------------------------------- ##
 ## AC_INIT with unusual version strings. ##
@@ -225,35 +270,139 @@ AT_CLEANUP
 
 AT_SETUP([AC_INIT with unusual version strings])
 
-AT_DATA([configure.ac],
-[[AC_INIT([GNU String++ with  spaces (foo)],
-	  [2.48++  (2010-07-03)], [[http://example.com/?a=b&c=d#e]], [clisp])
-AC_OUTPUT
-]])
-
 if echo 'ab*c' | grep -F 'ab*c' >/dev/null 2>&1; then
   FGREP="grep -F"
 else
   FGREP=fgrep
 fi
 
-AT_CHECK_AUTOCONF([-Werror])
-AT_CHECK_CONFIGURE([-q])
-AT_CHECK_CONFIGURE([--help], [], [stdout])
-AT_CHECK([[$FGREP 'com/?a=b&c=d#e' stdout]], [], [ignore])
-AT_CHECK_CONFIGURE([--version], [], [stdout])
-AT_CHECK([$FGREP 'GNU String++ with  spaces (foo)' stdout], [], [ignore])
-AT_CHECK([$FGREP '2.48++  (2010-07-03)' stdout], [], [ignore])
-
-AT_CHECK([./config.status --help], [], [stdout])
-AT_CHECK([[$FGREP 'com/?a=b&c=d#e' stdout]], [], [ignore])
-AT_CHECK([./config.status --version], [], [stdout])
-AT_CHECK([$FGREP 'GNU String++ with  spaces (foo)' stdout], [], [ignore])
-AT_CHECK([$FGREP '2.48++  (2010-07-03)' stdout], [], [ignore])
+# In both of the arguments that might contain URLs, make sure we test
+# all of the unusual ASCII characters that commonly appear in URLs.
+#
+# The RFC 3986 "unreserved" characters are ASCII letters and digits, plus
+#    - . _ ~
+# The RFC 3986 "gen-delims" and "sub-delims" are
+#    / : ? # [ ] @ ! $ & ' ( ) * + , ; =
+# The URL escape character is
+#    %
+#
+# Any argument that contains characters significant to M4,
+#    [ ] ( ) ,
+# may need to be double-quoted depending on exactly how they are used
+# (as would an argument that contains a macro name, but we don't test
+# that here).
+#
+# Characters that are still significant for Bourne shell within a
+# single-quoted string, double-quoted string, quoted here-doc, or
+# unquoted here-doc are explicitly not allowed:
+#    ' " ` \ $
+#
+# We don't test unbalanced parentheses or brackets here.
 
 AT_DATA([configure.ac],
+[[AC_INIT([GNU String++ with  spaces
+           (foo)],
+	  [2.48++  (2010-07-03)],
+          [[https://example/~bug/cdfijknoqrvw/-._:@!()[]*+,;/?y=z#1234567890]],
+          [string++],
+          [[HTTPS://EXAMPLE/~PKG/BCDFIJNOQRUVW/-._:@!()[]*+,;/?y=z#1234567890]])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF([-Werror])
+AT_CHECK_CONFIGURE([-q])
+
+AT_CHECK_CONFIGURE([--help], [], [stdout])
+AT_CHECK([[$FGREP \
+  'https://example/~bug/cdfijknoqrvw/-._:@!()[]*+,;/?y=z#1234567890' \
+  stdout]], [], [ignore])
+AT_CHECK([[$FGREP \
+  'HTTPS://EXAMPLE/~PKG/BCDFIJNOQRUVW/-._:@!()[]*+,;/?y=z#1234567890' \
+  stdout]], [], [ignore])
+
+AT_CHECK_CONFIGURE([--version], [], [stdout])
+AT_CHECK([$FGREP 'GNU String++ with spaces (foo)' stdout], [], [ignore])
+AT_CHECK([$FGREP '2.48++ (2010-07-03)' stdout], [], [ignore])
+
+AT_CHECK([./config.status --help], [], [stdout])
+AT_CHECK([[$FGREP \
+  'https://example/~bug/cdfijknoqrvw/-._:@!()[]*+,;/?y=z#1234567890' \
+  stdout]], [], [ignore])
+AT_CHECK([[$FGREP \
+  'HTTPS://EXAMPLE/~PKG/BCDFIJNOQRUVW/-._:@!()[]*+,;/?y=z#1234567890' \
+  stdout]], [], [ignore])
+
+AT_CHECK([./config.status --version], [], [stdout])
+AT_CHECK([$FGREP 'GNU String++ with spaces (foo)' stdout], [], [ignore])
+AT_CHECK([$FGREP '2.48++ (2010-07-03)' stdout], [], [ignore])
+
+# Repeat the above test using all the unusual characters that might appear
+# in a list of email addresses in both BUG-REPORT and URL.  (URL isn't
+# supposed to contain email addresses, but there's no good reason to
+# restrict its syntax.)
+# The RFC 5822 "atext" characters are ASCII letters and digits, plus
+#    ! # $ % & ' * + - / = ? ^ _ ` { | } ~
+# The RFC 5822 "special" characters, all of which might appear somewhere
+# in an address list, are
+#    ( ) < > [ ] : ; @ \ , . "
+# As above, characters that are significant for Bourne shell within
+# strings and heredocs are explicitly not allowed:
+#    ' " ` \ $
+# As above, any argument that contains characters significant to M4,
+#    [ ] ( ) ,
+# may need to be double-quoted depending on exactly how they are used
+# (as would an argument that contains a macro name, but we don't test
+# that here).
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String++ with  spaces
+           (foo)],
+	  [2.48++  (2010-07-03)],
+          [[bugs: fred <A=B?C^D_E@F>,
+                  G!H!I#J@K.L (wilma),
+                  M%N&O@[156.247.38.49],
+                  P*Q+R-S/T@U,
+                  {jon|chyp~}@kqtvxz.VWXYZ;]],
+          [string++],
+          [[contact: jem <A=B?C^D_E@bd>,
+                     F!G!H#I@fv.J (lugh),
+                     K%L&M@[156.247.38.49],
+                     N*O+P-Q/R@STU,
+                     {qik|~prys}@wxz.VWXYZ;]])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF([-Werror])
+AT_CHECK_CONFIGURE([-q])
+
+AT_CHECK_CONFIGURE([--help], [], [stdout])
+AT_CHECK([[$FGREP \
+  'bugs: fred <A=B?C^D_E@F>, G!H!I#J@K.L (wilma), M%N&O@[156.247.38.49], P*Q+R-S/T@U, {jon|chyp~}@kqtvxz.VWXYZ;' \
+  stdout]], [], [ignore])
+AT_CHECK([[$FGREP \
+  'contact: jem <A=B?C^D_E@bd>, F!G!H#I@fv.J (lugh), K%L&M@[156.247.38.49], N*O+P-Q/R@STU, {qik|~prys}@wxz.VWXYZ;' \
+  stdout]], [], [ignore])
+
+AT_CHECK_CONFIGURE([--version], [], [stdout])
+AT_CHECK([$FGREP 'GNU String++ with spaces (foo)' stdout], [], [ignore])
+AT_CHECK([$FGREP '2.48++ (2010-07-03)' stdout], [], [ignore])
+
+AT_CHECK([./config.status --help], [], [stdout])
+AT_CHECK([[$FGREP \
+  'bugs: fred <A=B?C^D_E@F>, G!H!I#J@K.L (wilma), M%N&O@[156.247.38.49], P*Q+R-S/T@U, {jon|chyp~}@kqtvxz.VWXYZ;' \
+  stdout]], [], [ignore])
+AT_CHECK([[$FGREP \
+  'contact: jem <A=B?C^D_E@bd>, F!G!H#I@fv.J (lugh), K%L&M@[156.247.38.49], N*O+P-Q/R@STU, {qik|~prys}@wxz.VWXYZ;' \
+  stdout]], [], [ignore])
+
+AT_CHECK([./config.status --version], [], [stdout])
+AT_CHECK([$FGREP 'GNU String++ with spaces (foo)' stdout], [], [ignore])
+AT_CHECK([$FGREP '2.48++ (2010-07-03)' stdout], [], [ignore])
+
+# Check for invalid characters in each argument.
+AT_DATA([configure.ac],
 [[AC_INIT([GNU "String++"],
-	  [2.48], [http://example.com/], [clisp])
+	  [2.48], [https://example.com/], [string++])
 AC_OUTPUT
 ]])
 
@@ -262,7 +411,7 @@ AT_CHECK([grep 'AC_INIT: not a literal: ' stderr], [], [ignore])
 
 AT_DATA([configure.ac],
 [[AC_INIT([GNU String++],
-	  ['codename' 2.48], [http://example.com/], [clisp])
+	  ['codename' 2.48], [https://example.com/], [string++])
 AC_OUTPUT
 ]])
 
@@ -271,12 +420,140 @@ AT_CHECK([grep 'AC_INIT: not a literal: ' stderr], [], [ignore])
 
 AT_DATA([configure.ac],
 [[AC_INIT([GNU
-String++], [2.48], [http://example.com/], [clisp])
+String++], [2.48], [https://example.com/], [string++])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF([-Werror])
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String++], ['2.48'], [https://example.com], [string++])
 AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF([-Werror], [1], [ignore], [stderr])
 AT_CHECK([grep 'AC_INIT: not a literal: ' stderr], [], [ignore])
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String++], [2.48], ['https://example.com'], [string++])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF([-Werror], [1], [ignore], [stderr])
+AT_CHECK([grep 'AC_INIT: not a literal: ' stderr], [], [ignore])
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String++], [2.48], [https://example.com], [string++],
+          ['https://example.com'])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF([-Werror], [1], [ignore], [stderr])
+AT_CHECK([grep 'AC_INIT: not a literal: ' stderr], [], [ignore])
+
+
+# The TARNAME argument is used to construct filenames, so it's even
+# more constrained.
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String++], [2.48], [https://example.com], ['string++'])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF([-Werror], [1], [ignore], [stderr])
+AT_CHECK([grep 'AC_INIT: unsafe as a filename: ' stderr], [], [ignore])
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String++], [2.48], [https://example.com], [string ++])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF([-Werror], [1], [ignore], [stderr])
+AT_CHECK([grep 'AC_INIT: unsafe as a filename: ' stderr], [], [ignore])
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String++], [2.48], [https://example.com], [string*])
+AC_OUTPUT
+]])
+
+AT_CHECK_AUTOCONF([-Werror], [1], [ignore], [stderr])
+AT_CHECK([grep 'AC_INIT: unsafe as a filename: ' stderr], [], [ignore])
+
+# Commas and unbalanced close parentheses are especially troublesome for M4.
+# They are only expected to work when double-quoted, but even then they can
+# cause malfunctions if not handled carefully within Autoconf.
+
+AT_DATA([configure.ac],
+[[AC_INIT([[GNU, String]], [2.48], [bugs@gstring.example],
+          [string], [https://gstring.example/])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF
+
+AT_DATA([configure.ac],
+[[AC_INIT([[GNU String)]], [2.48], [bugs@gstring.example],
+          [string], [https://gstring.example/])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String], [[2,48]], [bugs@gstring.example],
+          [string], [https://gstring.example/])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String], [[2.48)]], [bugs@gstring.example],
+          [string], [https://gstring.example/])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String], [2.48], [[bugs@gstring.example,
+                                 gstring-bugs@example.com]],
+          [string], [https://gstring.example/])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String], [2.48], [[bugs)@gstring.example]],
+          [string], [https://gstring.example/])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String], [2.48], [bugs@gstring.example],
+          [[string,]], [https://gstring.example/])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String], [2.48], [bugs@gstring.example],
+          [[string)]], [https://gstring.example/])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF([], [0], [ignore], [stderr])
+AT_CHECK([grep 'AC_INIT: unsafe as a filename: ' stderr], [], [ignore])
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String], [2.48], [bugs@gstring.example],
+          [string], [[https://gstring.example/docs,html]])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF
+
+AT_DATA([configure.ac],
+[[AC_INIT([GNU String], [2.48], [bugs@gstring.example],
+          [string], [[https://gstring.example/weird)/path]])
+AC_OUTPUT
+]])
+AT_CHECK_AUTOCONF
 
 AT_CLEANUP
 
@@ -297,6 +574,7 @@ words that may be matched by scanners for legal things,
 causing extra work for distributors.
 Multi-line values should be supported.
 ]])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -317,13 +595,10 @@ AT_CLEANUP
 ## ---------------- ##
 
 # Make sure AC_CACHE_CHECK is silent with -q.
-# Also make sure we warn about cache id's not named with `_cv_'.
+# Also make sure we warn about cache id's not named with '_cv_'.
 
 AT_SETUP([AC_CACHE_CHECK])
 AT_KEYWORDS([CONFIG_SITE])
-
-# Don't let a config.site file affect this test.
-AS_UNSET([CONFIG_SITE])
 
 AT_DATA([configure.ac],
 [[AC_INIT
@@ -346,8 +621,7 @@ if ${my_cv_variable+false} :; then
   AC_MSG_ERROR([AC@&@&t@t@_CACHE_VAL did not ensure that the cache variable was set])
 fi
 
-# AC_CACHE_SAVE should be enough here, no need for AC_OUTPUT.
-AC_CACHE_SAVE
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF([], [], [], [stderr])
@@ -414,7 +688,7 @@ AC_DEFUN([AC_SHELL_TRUE],
                  (true) 2>/dev/null && my_cv_shell_true_works=yes
                  if test "x$my_cv_shell_true_works" = xyes; then
                    AC_DEFINE([TRUE_WORKS], [1],
-                             [Define if `true(1)' works properly.])
+                             [Define if 'true(1)' works properly.])
                  fi])
 ])
 AC_SHELL_TRUE
@@ -431,7 +705,7 @@ AC_DEFUN([AC_SHELL_TRUE],
                  (true) 2>/dev/null && my_cv_shell_true_works=yes])
  if test "x$my_cv_shell_true_works" = xyes; then
    AC_DEFINE([TRUE_WORKS], [1],
-             [Define if `true(1)' works properly.])
+             [Define if 'true(1)' works properly.])
  fi
 ])
 AC_SHELL_TRUE
@@ -501,6 +775,17 @@ AT_CHECK([grep 'failed to load site script' stderr], [], [ignore], [ignore],
 CONFIG_SITE=./no-such-file
 AT_CHECK_CONFIGURE
 
+# Check that multiple files are loaded
+AT_DATA([first.site],
+[[my_cv_shell_true_works=no
+]])
+AT_DATA([second.site],
+[[my_cv_shell_true_works=maybe
+]])
+CONFIG_SITE="$PWD/first.site $PWD/second.site"
+AT_CHECK_CONFIGURE([], [], [stdout])
+AT_CHECK([grep 'whether true.*works.*cached.*maybe' stdout], [], [ignore])
+
 AT_CLEANUP
 
 
@@ -546,6 +831,7 @@ AC_COMPUTE_INT([invalid_expression],
 	       [invalid_expression=failed])
 test "$invalid_expression" = failed ||
   AC_MSG_ERROR([**0** evaluated to $invalid_expression instead of failing])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -576,6 +862,8 @@ if AC_TRY_COMMAND([(echo "The Cat in the Hat";
 		   grep \^The\ Hat\ in\ the\ Cat\$ >/dev/null]); then
   AC_MSG_ERROR([saw the Hat in the Cat])
 fi
+
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -593,11 +881,15 @@ AT_SETUP([Input/Output])
 AT_DATA([configure.ac],
 [[AC_INIT
 cat <&AS@&t@_ORIGINAL_STDIN_FD >&AS@&t@_MESSAGE_FD
+AC_OUTPUT
 ]])
 AT_CHECK_AUTOCONF
-AT_CHECK([echo Hello | CONFIG_SITE=/dev/null ./configure $configure_options | grep -v 'configure: loading site script '],, [Hello
+AT_CHECK([echo Hello |
+  ./configure $configure_options |
+  grep -v '^configure: '],,
+[Hello
 ])
-AT_CHECK([echo Hello | CONFIG_SITE=/dev/null ./configure $configure_options --silent])
+AT_CHECK([echo Hello | ./configure $configure_options --silent])
 
 AT_CLEANUP
 
@@ -611,6 +903,7 @@ AT_SETUP([configure arguments])
 AT_DATA([configure.ac],
 [[AC_INIT
 echo "$@"
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -649,6 +942,7 @@ AC_ARG_ENABLE([c++],
 echo "use_foo: $use_foo"
 echo "with_c++: $with_c__, $choice_with"
 echo "enable_c++: $enable_c__, $choice_enable"
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -681,9 +975,6 @@ AT_CLEANUP
 ## --------------------- ##
 
 AT_SETUP([configure directories])
-
-CONFIG_SITE=/dev/null
-export CONFIG_SITE
 
 AT_DATA([foo.in],
 [[prefix=@prefix@
@@ -768,5 +1059,78 @@ AT_CHECK([cat file], [],
 two
 FOO
 ]])
+
+AT_CLEANUP
+
+## ----------------------------------- ##
+## configure with closed standard fds  ##
+## ----------------------------------- ##
+
+AT_SETUP([configure with closed standard fds])
+AT_KEYWORDS([AS@&t@_INIT])
+
+# Create a configure script that runs a relatively complicated but
+# self-contained test.  Run it.
+AT_CONFIGURE_AC([[AC_PROG_CC]])
+AT_CHECK_AUTOCONF
+AT_CHECK_AUTOHEADER
+AT_CHECK_CONFIGURE([], [], [stdout], [stderr])
+AT_CHECK_ENV
+
+mv stdout stdout-expected
+mv stderr stderr-expected
+mv state-env.after state-env-expected
+mv config.status config-status-expected
+mv config.h config-h-expected
+
+# Run it again with stdin (fd 0) closed.
+# There should be no change to the stdout or stderr output and the
+# result of configuration should be the same.
+
+AT_CHECK_CONFIGURE([ 0<&- ], [], [stdout], [stderr])
+AT_CHECK_ENV
+AT_CMP([stdout-expected], [stdout])
+AT_CMP([stderr-expected], [stderr])
+AT_CONFIG_CMP([state-env-expected], [state-env.after])
+
+mv stdout stdout-closed-0
+mv stderr stderr-closed-0
+mv state-env.after state-env-closed-0
+mv config.status config-status-closed-0
+mv config.h config-h-closed-0
+
+# Run it again with stdout (fd 1) closed.
+# There should be no change to the stderr output and the
+# result of configuration should be the same.  (Any output
+# that would have gone to stdout, of course, is lost.)
+
+AT_CHECK_CONFIGURE([ 1>&- ], [], [stdout], [stderr])
+AT_CHECK_ENV
+AT_CHECK([test -f stdout && test ! -s stdout])
+AT_CMP([stderr-expected], [stderr])
+AT_CONFIG_CMP([state-env-expected], [state-env.after])
+
+mv stdout stdout-closed-1
+mv stderr stderr-closed-1
+mv state-env.after state-env-closed-1
+mv config.status config-status-closed-1
+mv config.h config-h-closed-1
+
+# Run it again with stderr (fd 2) closed.
+# There should be no change to the stdout output and the
+# result of configuration should be the same.  (Any output
+# that would have gone to stderr, of course, is lost.)
+
+AT_CHECK_CONFIGURE([ 2>&- ], [], [stdout], [stderr])
+AT_CHECK_ENV
+AT_CMP([stdout-expected], [stdout])
+AT_CHECK([test -f stderr && test ! -s stderr])
+AT_CONFIG_CMP([state-env-expected], [state-env.after])
+
+mv stdout stdout-closed-2
+mv stderr stderr-closed-2
+mv state-env.after state-env-closed-2
+mv config.status config-status-closed-2
+mv config.h config-h-closed-2
 
 AT_CLEANUP

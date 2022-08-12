@@ -2,8 +2,8 @@
 
 AT_BANNER([Low level compiling/preprocessing macros.])
 
-# Copyright (C) 2000-2001, 2003, 2005-2015 Free Software Foundation,
-# Inc.
+# Copyright (C) 2000-2001, 2003, 2005-2017, 2020-2022 Free Software
+# Foundation, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@ AT_BANNER([Low level compiling/preprocessing macros.])
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 # Since the macros which compile are required by most tests, check
@@ -55,6 +55,7 @@ AC_LANG_POP([C++])
 # C C
 AC_LANG_POP([C])
 # C
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -106,7 +107,10 @@ AC_F77_2
 AS_EXIT(0)
 ]])
 
-AT_CHECK_AUTOCONF
+AT_CHECK_AUTOCONF([], [0], [],
+[[trailer.m4: warning: AC_OUTPUT was never used
+]])
+
 AT_CHECK_CONFIGURE
 
 AT_CLEANUP
@@ -129,6 +133,7 @@ int main (void)
   return 0;
 }
 ]], [], [AC_MSG_FAILURE([confdefs not included])])])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -155,6 +160,7 @@ int main (void)
   return 0;
 }
 ]], [], [AC_MSG_FAILURE([confdefs not included])])])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -169,22 +175,18 @@ AT_CLEANUP
 
 AT_SETUP([AC_LANG_SOURCE example])
 
-# Set CONFIG_SITE to a nonexistent file, so that there are
-# no worries about configure output caused by sourcing a config.site.
-CONFIG_SITE=no-such-file
-export CONFIG_SITE
-
 AT_DATA([configure.ac],
 [[# Taken from autoconf.texi:Generating Sources.
 # The only change is to not fail if gcc doesn't work.
 AC_INIT([Hello], [1.0], [bug-hello@example.org], [],
-        [http://www.example.org/])
+        [https://www.example.org/])
 AC_DEFINE([HELLO_WORLD], ["Hello, World\n"],
   [Greetings string.])
 AC_LANG([C])
 AC_LANG_CONFTEST(
    [AC_LANG_SOURCE([[const char hw[] = "Hello, World\n";]])])
 gcc -E -dD conftest.c || AS_EXIT([77])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -193,13 +195,13 @@ AT_CHECK_CONFIGURE([], [], [stdout])
 # Note that the output may contain more defines and lines matching
 #   # 1 "conftest.c"
 # so delete everything before the interesting output.
-AT_CHECK([sed -n 's/ *$//; /#define PACKAGE/,$p' stdout], [],
+AT_CHECK([sed -n 's/ *$//; /^configure: /d; /#define PACKAGE/,$p' stdout], [],
 [[#define PACKAGE_NAME "Hello"
 #define PACKAGE_TARNAME "hello"
 #define PACKAGE_VERSION "1.0"
 #define PACKAGE_STRING "Hello 1.0"
 #define PACKAGE_BUGREPORT "bug-hello@example.org"
-#define PACKAGE_URL "http://www.example.org/"
+#define PACKAGE_URL "https://www.example.org/"
 #define HELLO_WORLD "Hello, World\n"
 
 const char hw[] = "Hello, World\n";
@@ -214,22 +216,18 @@ AT_CLEANUP
 
 AT_SETUP([AC_LANG_PROGRAM example])
 
-# Set CONFIG_SITE to a nonexistent file, so that there are
-# no worries about configure output caused by sourcing a config.site.
-CONFIG_SITE=no-such-file
-export CONFIG_SITE
-
 AT_DATA([configure.ac],
 [[# Taken from autoconf.texi:Generating Sources.
 # The only change is to not fail if gcc doesn't work.
 AC_INIT([Hello], [1.0], [bug-hello@example.org], [],
-        [http://www.example.org/])
+        [https://www.example.org/])
 AC_DEFINE([HELLO_WORLD], ["Hello, World\n"],
   [Greetings string.])
 AC_LANG_CONFTEST(
 [AC_LANG_PROGRAM([[const char hw[] = "Hello, World\n";]],
                  [[fputs (hw, stdout);]])])
 gcc -E -dD conftest.c || AS_EXIT([77])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -238,13 +236,13 @@ AT_CHECK_CONFIGURE([], [], [stdout])
 # Note that the output may contain more defines and lines matching
 #   # 1 "conftest.c"
 # so delete everything before the interesting output.
-AT_CHECK([sed -n 's/ *$//; /#define PACKAGE/,$p' stdout], [],
+AT_CHECK([sed -n 's/ *$//; /^configure: /d; /#define PACKAGE/,$p' stdout], [],
 [[#define PACKAGE_NAME "Hello"
 #define PACKAGE_TARNAME "hello"
 #define PACKAGE_VERSION "1.0"
 #define PACKAGE_STRING "Hello 1.0"
 #define PACKAGE_BUGREPORT "bug-hello@example.org"
-#define PACKAGE_URL "http://www.example.org/"
+#define PACKAGE_URL "https://www.example.org/"
 #define HELLO_WORLD "Hello, World\n"
 
 const char hw[] = "Hello, World\n";
@@ -271,6 +269,7 @@ AT_DATA([configure.ac],
 [[AC_INIT
 AC_COMPILE_IFELSE([int main (void) { return 0; }], [],
   [AC_MSG_ERROR([compiling trivial program failed])])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF([], [], [], [stderr])
@@ -282,6 +281,7 @@ AT_DATA([configure.ac],
 [[AC_INIT
 AC_COMPILE_IFELSE([AC_LANG_DEFINES_PROVIDED()int main (void) { return 0; }], [],
   [AC_MSG_ERROR([compiling trivial program failed])])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -291,11 +291,12 @@ AT_DATA([configure.ac],
 [[AC_INIT
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [return 0])],
 	      [],
-	      [AC_MSG_ERROR([compiling `return 0' failed])])
+	      [AC_MSG_ERROR([compiling 'return 0' failed])])
 
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [return 2])],
 	      [],
-	      [AC_MSG_ERROR([compiling `return 2' failed])])
+	      [AC_MSG_ERROR([compiling 'return 2' failed])])
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -315,30 +316,36 @@ AT_DATA([configure.ac],
 
 AC_RUN_IFELSE([AC_LANG_PROGRAM([], [return 0])],
 	      [],
-	      [AC_MSG_ERROR([saw `return 0' as a failure])])
+	      [AC_MSG_ERROR([saw 'return 0' as a failure])])
 
 AC_RUN_IFELSE([AC_LANG_PROGRAM([], [return 2])],
-	      [AC_MSG_ERROR([saw `return 2' as a success])],
+	      [AC_MSG_ERROR([saw 'return 2' as a success])],
 	      [estatus=$?
 test $estatus != 2 &&
-  AC_MSG_ERROR([did not get as 2 exit status: $estatus])])
+  AC_MSG_ERROR([did not get 2 as exit status: $estatus])])
 
 # The old stinky one.
 AC_TRY_RUN([int main (void) { return 3; }],
-	   [AC_MSG_ERROR([saw `return 3' as a success])],
+	   [AC_MSG_ERROR([saw 'return 3' as a success])],
 	   [estatus=$?
 test $estatus != 3 &&
   AC_MSG_ERROR([did not get 3 as exit status: $estatus])])
 
+AC_OUTPUT
 ]])
 
-AT_CHECK_AUTOCONF
+AT_CHECK_AUTOCONF([], 0, [],
+[[configure.ac:14: warning: The macro 'AC_TRY_RUN' is obsolete.
+configure.ac:14: You should run autoupdate.
+general.m4: AC_TRY_RUN is expanded from...
+configure.ac:14: the top level
+]])
 AT_CHECK_CONFIGURE([-q])
 
 AT_CLEANUP
 
 ## --------------------------  ##
-## Order of `rm' and actions.  ##
+## Order of 'rm' and actions.  ##
 ## --------------------------  ##
 
 AT_SETUP([Order of user actions and cleanup])
@@ -375,6 +382,8 @@ d@&t@nl conftest.err not generated by AC_RUN_IFELSE?
 AC_RUN_IFELSE([AC_LANG_PROGRAM([int bad bad;], [])],
 	      [AS_EXIT([1])],
 	      [])
+
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -389,7 +398,7 @@ AT_CLEANUP
 
 AT_CHECK_MACRO([AC_TRY_LINK_FUNC],
 [AC_TRY_LINK_FUNC(printf,,
-		  [AC_MSG_ERROR([cannot find `printf'])])
+		  [AC_MSG_ERROR([cannot find 'printf'])])
 AC_TRY_LINK_FUNC(Be_doomed_if_your_libc_has_a_function_named_like_this,
 		 [AC_MSG_ERROR([found a nonexistent function])])])
 
@@ -410,6 +419,8 @@ AC_COMPILE_IFELSE([
     choke me
     #endif
   ]])], [], AS_EXIT([77]))
+
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -428,6 +439,8 @@ AC_COMPILE_IFELSE([
     #endif
   ]])], [], AS_EXIT([77]))
 AC_LANG_POP([C++])
+
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF
@@ -457,6 +470,8 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([class A {};], [])],
 
 AC_CHECK_HEADER([cstring])
 AC_LANG_POP([C++])
+
+AC_OUTPUT
 ]])
 
 AT_CHECK_AUTOCONF

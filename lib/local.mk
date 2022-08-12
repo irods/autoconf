@@ -1,6 +1,7 @@
 # Make Autoconf-related libraries.
 
-# Copyright (C) 2001-2005, 2009-2015 Free Software Foundation, Inc.
+# Copyright (C) 2001-2005, 2009-2017, 2020-2022 Free Software
+# Foundation, Inc.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,7 +14,7 @@
 # GNU General Public License for more details.
 
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ETAGS_ARGS += $(ETAGS_FOR_AUTOCONF)
 TAGS_FILES = # Incrementally updated later.
@@ -33,6 +34,7 @@ dist_perllib_DATA = \
   lib/Autom4te/C4che.pm \
   lib/Autom4te/ChannelDefs.pm \
   lib/Autom4te/Channels.pm \
+  lib/Autom4te/Config.pm \
   lib/Autom4te/Configure_ac.pm \
   lib/Autom4te/FileUtils.pm \
   lib/Autom4te/General.pm \
@@ -96,7 +98,8 @@ dist_autoconflib_DATA = \
   lib/autoconf/headers.m4 \
   lib/autoconf/types.m4 \
   lib/autoconf/libs.m4 \
-  lib/autoconf/programs.m4
+  lib/autoconf/programs.m4 \
+  lib/autoconf/trailer.m4
 
 nodist_autoconflib_DATA = lib/autoconf/autoconf.m4f
 CLEANFILES += $(nodist_autoconflib_DATA)
@@ -141,32 +144,13 @@ dist_m4sugarlib_DATA = \
   lib/m4sugar/m4sh.m4
 
 nodist_m4sugarlib_DATA = \
-  lib/m4sugar/version.m4 \
   lib/m4sugar/m4sugar.m4f \
   lib/m4sugar/m4sh.m4f
 
-CLEANFILES += $(nodist_m4sugarlib_DATA)
+nodist_pkgdata_DATA += \
+  lib/version.m4
 
-# The ':;' in the second line of the recipe works around a redirected
-# compound command bash exit status bug.
-lib/m4sugar/version.m4: Makefile
-	$(MKDIR_P) $(@D)
-	:;{ \
-	  echo '# This file is part of -*- Autoconf -*-.' && \
-	  echo '# Version of Autoconf.' && \
-	  echo '# Copyright (C) 1999, 2000, 2001, 2002, 2006, 2007, 2009' && \
-	  echo '# Free Software Foundation, Inc.' && \
-	  echo  &&\
-	  echo 'm4_define([m4_PACKAGE_NAME],      [$(PACKAGE_NAME)])' && \
-	  echo 'm4_define([m4_PACKAGE_TARNAME],   [$(PACKAGE_TARNAME)])' && \
-	  echo 'm4_define([m4_PACKAGE_VERSION],   [$(PACKAGE_VERSION)])' && \
-	  echo 'm4_define([m4_PACKAGE_STRING],    [$(PACKAGE_STRING)])' && \
-	  echo 'm4_define([m4_PACKAGE_BUGREPORT], [$(PACKAGE_BUGREPORT)])' && \
-	  echo 'm4_define([m4_PACKAGE_URL],       [$(PACKAGE_URL)])' && \
-	  echo 'm4_define([m4_PACKAGE_YEAR],      [$(RELEASE_YEAR)])'; \
-	} > $@-t
-	mv $@-t $@
-
+CLEANFILES += $(nodist_m4sugarlib_DATA) $(nodist_pkgdata_DATA)
 TAGS_FILES += $(dist_m4sugarlib_DATA)
 
 forbidden_patterns_files += $(dist_m4sugarlib_DATA)
@@ -193,3 +177,32 @@ TAGS_FILES += $(dist_autotestlib_DATA)
 forbidden_patterns_files += $(dist_autotestlib_DATA)
 
 lib/autotest/autotest.m4f: $(autotest_m4f_dependencies)
+
+## --------------------------- ##
+## Install auxiliary scripts.  ##
+## --------------------------- ##
+
+# These are declared as _DATA so that they are not subject to
+# --program-transform-name; $(pkgdatadir) is sufficient to keep
+# multiple installations separate, and autoreconf looks for them by
+# their unadorned names.  However, autoreconf copies the executable
+# bit when it copies these files into a source tree, and _DATA items
+# are installed as not-executable, so we have to make them executable
+# in a hook rule.
+
+AUXSCRIPTS = \
+  build-aux/config.guess \
+  build-aux/config.sub \
+  build-aux/install-sh
+
+buildauxdir = $(pkgdatadir)/build-aux
+dist_buildaux_DATA = \
+  $(AUXSCRIPTS)
+
+install-data-hook: install-data-hook-make-aux-scripts-executable
+install-data-hook-make-aux-scripts-executable:
+	for s in $(AUXSCRIPTS); do \
+	  chmod +x "$(DESTDIR)$(pkgdatadir)/$$s"; \
+	done
+
+.PHONY: install-data-hook install-data-hook-make-aux-scripts-executable
